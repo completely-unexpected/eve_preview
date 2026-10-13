@@ -1,0 +1,49 @@
+/* Functional views use the existing theme. */
+[hidden]{display:none!important}
+.route-view{min-height:65vh;padding-top:30px}
+.back-link{display:inline-block;color:var(--muted);font-size:12px;margin-bottom:15px}
+.back-link:hover{color:var(--gold)}
+.route-heading h1{font-size:28px;color:var(--text);text-shadow:none;letter-spacing:-1px;margin:0 0 12px}
+.route-heading p{color:var(--muted);line-height:1.8;margin:0 0 25px}
+.route-tools{display:flex;gap:15px;align-items:end;margin-bottom:20px;flex-wrap:wrap}
+.route-tools label{display:block;font-size:12px;color:var(--muted)}
+.route-tools input,.route-tools select{display:block;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:12px;border-radius:4px;margin-top:7px;min-width:160px;max-width:100%}
+.route-tools input{width:330px}
+.route-game-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:20px}
+.route-game-grid .game-tile{height:160px}
+.detail-panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:24px;min-width:0}
+.detail-panel h2{font-size:20px;margin:0 0 15px;line-height:1.7}
+.detail-panel h3{font-size:14px;color:var(--gold);margin-top:26px}
+.detail-panel p{color:var(--muted);line-height:1.9}
+.game-detail{text-align:center;padding:45px 25px}
+.detail-symbol{font-size:80px;margin:10px 0 20px}
+.sample-notice{color:#d9c399;background:#b7963814;border:1px solid #b7963845;border-radius:4px;padding:16px;margin:25px 0;line-height:1.8}
+.primary-button,.secondary-button{display:inline-block;border-radius:4px;font-size:12px;padding:12px 18px;cursor:pointer;text-align:center}
+.primary-button{background:var(--gold);border:1px solid var(--gold);color:#17232d;font-weight:700}
+.secondary-button{background:transparent;border:1px solid #526071;color:var(--text)}
+.game-detail .primary-button{margin-right:8px}
+.event-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.event-card{color:var(--text);text-align:left;display:block;transition:border-color .15s}
+.event-card:hover{border-color:#b79a60}
+.event-symbol{font-size:50px;display:block;margin-bottom:22px}
+.event-card .eyebrow{display:block;margin-bottom:15px}
+.event-detail{max-width:850px}
+.detail-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.filter-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:25px}
+.filter-tabs button{padding:11px 18px;border:1px solid var(--line);border-radius:4px;background:var(--panel);color:var(--text)}
+.filter-tabs button.active{border-color:var(--gold);color:var(--gold)}
+.sports-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 260px;gap:15px;align-items:start}
+.match-row{display:flex;flex-direction:column;align-items:start;text-align:left;width:100%;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:17px;gap:12px;margin-bottom:10px}
+.match-row:hover{border-color:#718297}
+.market-button{display:flex;align-items:center;justify-content:space-between;width:100%;padding:14px;margin-bottom:8px;border:1px solid var(--line);background:#1b2630;border-radius:4px;color:var(--text)}
+.market-button strong{color:var(--gold)}
+.market-button[aria-pressed=true]{border-color:var(--gold);background:#63572455}
+.sample-score{font-size:35px!important;color:var(--gold)!important}
+.selection-panel h2{font-size:17px}
+.selection-item{display:flex;flex-direction:column;gap:10px;padding:15px 0;border-bottom:1px solid var(--line);font-size:12px}
+.selection-item span{color:var(--muted)}
+.selection-item button{align-self:flex-end}
+.selection-panel>.secondary-button{margin-top:20px;width:100%}
+.empty-state{padding:25px 15px;color:var(--muted);line-height:1.8;border:1px dashed #40505e;border-radius:4px}
+@media(max-width:1000px){.sports-layout{grid-template-columns:1fr 1fr}.selection-panel{grid-column:1/-1}.route-game-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.header-main{min-width:0}.header-main nav{flex-basis:100%;min-width:0;max-width:100%;justify-content:flex-start}.route-heading h1{font-size:24px}.route-tools{display:grid;grid-template-columns:1fr;width:100%}.route-tools input,.route-tools select{width:100%;min-width:0}.route-game-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.route-game-grid .game-tile{height:135px}.event-grid,.sports-layout{grid-template-columns:1fr}.detail-panel{padding:20px}.game-detail{padding:30px 18px}.game-detail .primary-button,.game-detail .secondary-button{display:block;width:100%;margin:10px 0}.empty-state{grid-column:1/-1}}

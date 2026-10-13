@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+<defs>
+ <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff5c1"/><stop offset=".26" stop-color="#e9c574"/><stop offset=".5" stop-color="#ad7730"/><stop offset=".72" stop-color="#ffe6a0"/><stop offset="1" stop-color="#bd833a"/></linearGradient>
+ <linearGradient id="cup" x1=".2" y1="0" x2=".9" y2=".8"><stop stop-color="#fff7cf"/><stop offset=".2" stop-color="#efcd7c"/><stop offset=".5" stop-color="#ad702b"/><stop offset=".7" stop-color="#efc772"/><stop offset="1" stop-color="#825321"/></linearGradient>
+ <radialGradient id="orange" cx=".3" cy=".2" r=".8"><stop stop-color="#ffca81"/><stop offset=".45" stop-color="#e8903d"/><stop offset="1" stop-color="#984716"/></radialGradient>
+ <radialGradient id="white" cx=".35" cy=".2" r=".8"><stop stop-color="#fff"/><stop offset=".6" stop-color="#e3eaf0"/><stop offset="1" stop-color="#8298ac"/></radialGradient>
+ <radialGradient id="halo"><stop stop-color="#f3c55e" stop-opacity=".24"/><stop offset="1" stop-color="#eab65c" stop-opacity="0"/></radialGradient>
+ <linearGradient id="pedestal" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#ead39d"/><stop offset=".15" stop-color="#a98b51"/><stop offset=".25" stop-color="#21323b"/><stop offset="1" stop-color="#111e28"/></linearGradient>
+ <filter id="shadow" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="0" dy="14" stdDeviation="9" flood-color="#08121c" flood-opacity=".7"/></filter>
+ <clipPath id="basketClip"><circle cx="488" cy="260" r="62"/></clipPath>
+ <clipPath id="footballClip"><circle cx="130" cy="255" r="52"/></clipPath>
+</defs>
+<ellipse cx="323" cy="186" rx="265" ry="180" fill="url(#halo)"/>
+<g stroke="#eac579" stroke-opacity=".25"><ellipse cx="324" cy="211" rx="250" ry="97" transform="rotate(-17 324 211)"/><ellipse cx="324" cy="211" rx="230" ry="106" transform="rotate(17 324 211)"/><circle cx="324" cy="190" r="144" stroke-dasharray="2 10"/></g>
+<g fill="#f2ce84"><path d="m108 91 3-11 3 11 11 3-11 3-3 11-3-11-11-3Z"/><path d="m530 69 4-15 4 15 15 4-15 4-4 15-4-15-15-4Z"/><path d="m458 135 2-7 2 7 7 2-7 2-2 7-2-7-7-2Z"/><circle cx="178" cy="64" r="2"/><circle cx="406" cy="34" r="2"/><circle cx="553" cy="193" r="2"/><circle cx="63" cy="176" r="2"/><path d="m66 264 6-8 3 7-6 8Z"/><path d="m445 65 7-6 2 8-7 6Z"/></g>
+<ellipse cx="320" cy="319" rx="217" ry="18" fill="#091621" opacity=".6"/>
+<g filter="url(#shadow)"><path d="M227 273H417L443 309H201Z" fill="url(#pedestal)" stroke="#a3864f"/><path d="M216 285H429" stroke="#f8d895" stroke-opacity=".4"/><path d="M221 302H419" stroke="#f8d895" stroke-opacity=".3"/></g>
+<g filter="url(#shadow)">
+ <path d="M257 103H225C220 151 236 179 278 181M387 103H419C424 151 408 179 366 181" stroke="url(#gold)" stroke-width="12"/>
+ <path d="M253 77H391L381 163C377 190 352 211 322 211S267 190 263 163Z" fill="url(#cup)" stroke="#efce87" stroke-width="2"/>
+ <path d="M264 86H280L287 164C289 183 298 195 306 200C281 193 274 180 271 160Z" fill="#fff3bd" opacity=".35"/>
+ <path d="M308 208H336V244H308Z" fill="url(#gold)"/><path d="M290 243H354L366 259H278Z" fill="url(#cup)" stroke="#e4be73"/><rect x="277" y="258" width="90" height="13" rx="3" fill="url(#gold)"/>
+ <path d="m322 117 7 15 17 2-12 12 3 17-15-8-15 8 3-17-12-12 17-2Z" fill="#7e5024" opacity=".8"/><path d="m322 117 7 15 17 2-12 12 3 17-15-8-15 8 3-17-12-12 17-2Z" stroke="#f8d48a"/>
+ <path d="M248 76H396" stroke="#fff0b5" stroke-width="5" stroke-linecap="round"/>
+</g>
+<g filter="url(#shadow)"><circle cx="488" cy="260" r="62" fill="url(#orange)"/><g clip-path="url(#basketClip)" stroke="#67351c" stroke-width="3"><path d="M422 254Q482 270 549 240M475 191Q470 254 508 322M436 205Q493 232 456 322M535 217Q481 269 545 291"/></g><circle cx="488" cy="260" r="61" stroke="#e8ad68" stroke-opacity=".5"/></g>
+<g filter="url(#shadow)"><circle cx="130" cy="255" r="52" fill="url(#white)"/><g clip-path="url(#footballClip)"><path d="m124 239 21 1 8 20-18 14-18-14Z" fill="#243744"/><path d="m100 207 19 4-3 17-20 7-10-13m61-18 23 9-2 18-19-2-6-15m-64 46 17-7 9 18-9 19-18-8m67 17 19-13 18 12-6 22-27 2m-40 13 21-1 4 13-25 10" fill="#243744"/><path d="m116 225 10 14m24-10-5 11m-38 25 10-5m18 14 3 17m15-31 16 1" stroke="#6a7c87" stroke-width="2"/></g><circle cx="130" cy="255" r="51" stroke="#fff" stroke-opacity=".4"/></g>
+<g transform="translate(202 22) rotate(-7)"><rect width="227" height="37" rx="18.5" fill="#172832" stroke="#d1ab63" stroke-opacity=".55"/><text x="113.5" y="24" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="4" fill="#f4d596">PLAY YOUR MOMENT</text></g>
+<text x="322" y="301" text-anchor="middle" font-family="Arial,sans-serif" font-weight="900" font-size="16" letter-spacing="8" fill="#f3d59a">EVE</text>
+</svg>
