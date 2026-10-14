@@ -10,12 +10,14 @@ async function readGames(url = '/api/games/') {
 }
 function gameValues(game) {return [game.slug,game.name,game.englishName,game.symbol,'#198daf35',game.category];}
 
-const promos = [
-  ['WELCOME EVENT', '새로운 시작, 특별한 혜택', '매일 새로운 이벤트를 만나보세요.', '🎁'],
-  ['DAILY EVENT', '오늘의 플레이, 오늘의 즐거움', '일상에 즐거운 순간을 더하세요.', '🏆'],
-  ['QUIZ EVENT', '함께 즐기는 퀴즈 이벤트', '새로운 퀴즈와 재미있는 이야기를 만나보세요.', '💡'],
-  ['COMMUNITY EVENT', '함께 만드는 특별한 순간', '다양한 소식과 이벤트를 확인하세요.', '🎉']
-];
+let promos = [];
+async function readEvents(url = '/api/events/') {
+  const response = await fetch(url, {cache:'no-store',mode:'same-origin'});
+  if (response.status === 404) return null;
+  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('이벤트를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.');
+  return response.json();
+}
+
 const main = document.querySelector('main');
 const home = document.createElement('div');
 home.id = 'home-view';
@@ -50,25 +52,39 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 let slide = 0;
-const dots = [...document.querySelectorAll('.slide-dots button')];
+let dots = [];
+const promoButton = document.querySelector('.promo-detail');
+const promoPrev = document.querySelector('.prev');
+const promoNext = document.querySelector('.next');
 function setSlide(index) {
+  if (!promos.length) return;
   slide = (index + promos.length) % promos.length;
-  const [tag, title, description, symbol] = promos[slide];
-  document.querySelector('#promo-tag').textContent = tag;
-  document.querySelector('#promo-title').textContent = title;
-  document.querySelector('#promo-description').textContent = description;
-  document.querySelector('.promo-art').textContent = symbol;
-  dots.forEach((dot, i) => {
-    dot.classList.toggle('selected', i === slide);
-    dot.setAttribute('aria-pressed', String(i === slide));
-  });
+  const event = promos[slide];
+  document.querySelector('#promo-tag').textContent = event.tag;
+  document.querySelector('#promo-title').textContent = event.title;
+  document.querySelector('#promo-description').textContent = event.summary;
+  document.querySelector('.promo-art').textContent = event.symbol;
+  dots.forEach((dot,i) => {dot.classList.toggle('selected',i===slide);dot.setAttribute('aria-pressed',String(i===slide));});
 }
-document.querySelector('.prev').addEventListener('click', () => setSlide(slide - 1));
-document.querySelector('.next').addEventListener('click', () => setSlide(slide + 1));
-dots.forEach((dot, i) => dot.addEventListener('click', () => setSlide(i)));
-setSlide(0);
-document.querySelector('.promo-detail').addEventListener('click', () => location.hash = '#/events/' + slide);
-document.querySelector('#all-events').addEventListener('click', () => location.hash = '#/events');
+promoPrev.addEventListener('click',()=>setSlide(slide-1));
+promoNext.addEventListener('click',()=>setSlide(slide+1));
+promoButton.addEventListener('click',()=>{if(promos.length)location.hash='#/events/'+promos[slide].id;});
+document.querySelector('#all-events').addEventListener('click',()=>location.hash='#/events');
+async function loadPromotions() {
+  promoButton.disabled = promoPrev.disabled = promoNext.disabled = true;
+  const container = document.querySelector('.slide-dots');container.replaceChildren();
+  document.querySelector('#promo-tag').textContent='';
+  document.querySelector('#promo-title').textContent='이벤트 불러오는 중…';
+  document.querySelector('#promo-description').textContent='';
+  document.querySelector('.promo-art').textContent='';
+  try {
+    const result = await readEvents();promos=result.items;
+    if (!promos.length) {document.querySelector('#promo-title').textContent='게시된 이벤트가 없습니다.';return;}
+    dots = promos.map((event,i)=>{const button=document.createElement('button');button.setAttribute('aria-label','이벤트 '+(i+1));button.addEventListener('click',()=>setSlide(i));container.append(button);return button;});
+    promoButton.disabled=false;promoPrev.disabled=promoNext.disabled=promos.length<2;setSlide(0);
+  }catch(error){document.querySelector('#promo-title').textContent='이벤트 연결 오류';document.querySelector('#promo-description').textContent=error.message;}
+}
+loadPromotions();
 function openDialog(id) {
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
   document.querySelector('#' + id).showModal();
@@ -128,17 +144,25 @@ async function renderGame(id) {
     panel.querySelector('#game-information').addEventListener('click', () => showInfo(game.name + ' 이용 안내', '게임 제공업체 API 연동 후 이 화면에서 게임을 실행할 수 있도록 연결할 예정입니다. 현재는 게임 선택과 화면 이동만 제공됩니다.'));
   } catch (error) {if (panel.isConnected) panel.textContent = error.message;}
 }
-function eventCards() {
-  return promos.map(([tag, title, description, symbol], i) => `<a class="event-card detail-panel" href="#/events/${i}"><span class="event-symbol" aria-hidden="true">${symbol}</span><span class="eyebrow">${tag}</span><h2>${title}</h2><p>${description}</p><span class="gold">상세 보기 →</span></a>`).join('');
-}
-function renderEvents(id) {
-  if (id === undefined) {
-    routeView.innerHTML = pageHeading('이벤트', '현재 등록된 시안용 이벤트를 확인하세요.') + '<div class="event-grid">' + eventCards() + '</div>';
-    return;
-  }
-  if (!/^[0-3]$/.test(id)) return renderNotFound();
-  const [tag, title, description, symbol] = promos[Number(id)];
-  routeView.innerHTML = pageHeading(title, tag, 'events', '이벤트 목록으로') + `<article class="detail-panel event-detail"><span class="event-symbol" aria-hidden="true">${symbol}</span><h2>${title}</h2><p>${description}</p><h3>이벤트 안내</h3><p>이벤트 목록과 상세 화면의 연결을 확인하기 위한 샘플 콘텐츠입니다.</p><h3>진행 상태</h3><p>미운영 · 실제 참여 신청이나 혜택 지급은 제공하지 않습니다.</p><div class="detail-actions"><a class="secondary-button" href="#/events/${(Number(id) + 1) % promos.length}">다음 이벤트 →</a><a class="secondary-button" href="#/events">목록으로</a></div></article>`;
+async function renderEvents(id) {
+  routeView.innerHTML=pageHeading('이벤트','사이트 이벤트와 안내를 확인하세요.')+'<div id="event-content" aria-live="polite">불러오는 중…</div>';
+  const panel=routeView.querySelector('#event-content');
+  if(id!==undefined&&!/^[1-9][0-9]*$/.test(id)){panel.textContent='이벤트를 찾을 수 없습니다.';return;}
+  try {
+    const result=await readEvents('/api/events/'+(id===undefined?'':id+'/'));
+    if(!panel.isConnected)return;
+    if(!result){panel.textContent='이벤트를 찾을 수 없습니다.';return;}
+    if(id===undefined){
+      panel.className='event-grid';
+      panel.innerHTML=result.items.length?result.items.map(event=>`<a class="event-card detail-panel" href="#/events/${event.id}"><span class="event-symbol" aria-hidden="true">${escapeGameText(event.symbol)}</span><span class="eyebrow">${escapeGameText(event.tag)}</span><h2>${escapeGameText(event.title)}</h2><p>${escapeGameText(event.summary)}</p><span class="gold">상세 보기 →</span></a>`).join(''):'<p class="empty-state">게시된 이벤트가 없습니다.</p>';
+    }else{
+      const event=result.event;
+      routeView.querySelector('.route-heading h1').textContent=event.title;
+      routeView.querySelector('.route-heading p').textContent=event.tag;
+      document.title=event.title+' — EVE';
+      panel.innerHTML=`<article class="detail-panel event-detail"><span class="event-symbol" aria-hidden="true">${escapeGameText(event.symbol)}</span><h2>${escapeGameText(event.title)}</h2><p>${escapeGameText(event.summary)}</p><h3>이벤트 안내</h3><div class="notice-body">${escapeGameText(event.body)}</div><div class="detail-actions"><a class="secondary-button" href="#/events">목록으로</a></div></article>`;
+    }
+  }catch(error){if(panel.isConnected)panel.textContent=error.message;}
 }
 const providers = [
   ['live', '라이브 테이블', '♠', 'live'], ['cards', '카드 컬렉션', '🃏', 'live'],
