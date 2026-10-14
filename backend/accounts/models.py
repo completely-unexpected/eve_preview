@@ -15,6 +15,7 @@ class User(AbstractUser):
     account_status = models.CharField(
         "가입 상태", max_length=16, choices=Status.choices, default=Status.APPROVED,
     )
+    board_last_post_at = models.DateTimeField(null=True, blank=True, editable=False)
     session_revoked_at = models.DateTimeField(null=True, blank=True, editable=False)
 
     def clean(self):

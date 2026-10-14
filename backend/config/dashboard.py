@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_GET
 from inquiries.models import Inquiry
+from board.models import Post
 
 @require_GET
 def overview(request):
@@ -26,6 +27,14 @@ def overview(request):
         cards.extend([
             {"label":"전체 문의", "count":totals["total"], "url":link},
             {"label":"답변 대기 문의", "count":totals["pending"], "url":link+"?answer__exact="},
+        ])
+    post_admin = admin.site._registry[Post]
+    if post_admin.has_view_permission(request):
+        totals = Post.objects.aggregate(total=Count("pk"), hidden=Count("pk",filter=Q(is_published=False)))
+        link = reverse("admin:board_post_changelist")
+        cards.extend([
+            {"label":"전체 게시글", "count":totals["total"], "url":link},
+            {"label":"숨김 게시글", "count":totals["hidden"], "url":link+"?is_published__exact=0"},
         ])
     context = {**admin.site.each_context(request), "title":"관리자 현황", "cards":cards}
     return render(request,"admin/overview.html",context)

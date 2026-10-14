@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
 from django.test import TestCase
 from inquiries.models import Inquiry
+from board.models import Post
 
 class DashboardTests(TestCase):
     def setUp(self):
@@ -10,6 +11,8 @@ class DashboardTests(TestCase):
         self.member=User.objects.create_user(username='member')
         self.pending=User.objects.create_user(username='pending',account_status='pending')
         User.objects.create_user(username='suspended',account_status='suspended')
+        Post.objects.create(author=self.member,title='공개',body='내용')
+        Post.objects.create(author=self.member,title='숨김',body='내용',is_published=False)
         Inquiry.objects.create(member=self.member,title='대기',body='내용')
         Inquiry.objects.create(member=self.member,title='완료',body='내용',answer='답변')
     def test_anonymous_regular_and_inactive_staff_cannot_read(self):
@@ -27,7 +30,7 @@ class DashboardTests(TestCase):
         self.assertEqual(response.status_code,200)
         self.assertIn('no-cache',response['Cache-Control'])
         counts={card['label']:card['count'] for card in response.context['cards']}
-        self.assertEqual(counts,{'전체 회원':4,'승인 대기':1,'이용 정지':1,'전체 문의':2,'답변 대기 문의':1})
+        self.assertEqual(counts,{'전체 회원':4,'승인 대기':1,'이용 정지':1,'전체 문의':2,'답변 대기 문의':1,'전체 게시글':2,'숨김 게시글':1})
         for card in response.context['cards']:
             self.assertEqual(self.client.get(card['url']).status_code,200)
         self.assertContains(self.client.get('/admin/'),'관리자 현황 보기')
@@ -50,3 +53,13 @@ class DashboardTests(TestCase):
         self.assertEqual(counts['승인 대기'],0)
         self.assertEqual(counts['답변 대기 문의'],0)
         self.assertEqual(self.client.post('/admin/overview/').status_code,405)
+
+    def test_board_only_permission_limits_dashboard_and_hidden_link(self):
+        staff=get_user_model().objects.create_user(username='board_staff',is_staff=True)
+        staff.user_permissions.add(Permission.objects.get(content_type__app_label='board',codename='view_post'))
+        self.client.force_login(staff)
+        response=self.client.get('/admin/overview/')
+        self.assertEqual([card['label'] for card in response.context['cards']],['전체 게시글','숨김 게시글'])
+        hidden=self.client.get(response.context['cards'][1]['url'])
+        self.assertEqual(hidden.status_code,200)
+        self.assertEqual(list(hidden.context['cl'].queryset.values_list('title',flat=True)),['숨김'])
