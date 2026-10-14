@@ -16,6 +16,7 @@ class InquiryAdmin(admin.ModelAdmin):
         return False
     def save_model(self, request, obj, form, change):
         if "answer" in form.changed_data:
+            obj.answer_read_at = None
             obj.answer = obj.answer.strip()
             obj.answered_by = request.user if obj.answer else None
             obj.answered_at = timezone.now() if obj.answer else None

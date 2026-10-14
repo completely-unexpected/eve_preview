@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET, require_POST
 from .forms import SignupForm, ProfileForm
 from .models import User
 from . import throttle
+from inquiries.models import Inquiry
 
 
 def login_limited(seconds):
@@ -29,6 +30,7 @@ def session_data(request):
         "authenticated": user.is_authenticated,
         "user": {"username": user.username, "nickname": user.nickname, "joinedAt": user.date_joined.isoformat()}
         if user.is_authenticated else None,
+        "unreadReplies": Inquiry.objects.filter(member=user,answer_read_at__isnull=True).exclude(answer="").count() if user.is_authenticated else 0,
         "csrfToken": get_token(request),
     }
 

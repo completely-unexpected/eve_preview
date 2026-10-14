@@ -42,10 +42,14 @@ async function renderInquiries(id) {
     if(id===undefined){
       const add=text('a','문의 작성','secondary-button');add.href='#/inquiries/new';panel.append(add);
       if(!result.items.length)panel.append(text('p','등록한 문의가 없습니다.'));
-      for(const item of result.items){const link=text('a','','notice-row');link.href='#/inquiries/'+item.id;link.append(text('strong',item.title),text('span',(item.answered?'답변 완료':'답변 대기')+' · '+date(item.createdAt),'muted'));panel.append(link);}
+      for(const item of result.items){const link=text('a','','notice-row');link.href='#/inquiries/'+item.id;link.append(text('strong',item.title),text('span',(item.unread?'새 답변':item.answered?'답변 완료':'답변 대기')+' · '+date(item.createdAt),'muted'));panel.append(link);}
       const pagination=text('div','','detail-actions');for(const [number,label] of [[result.page-1,'이전'],[result.page+1,'다음']]){if(number<1||number>result.pages)continue;const link=text('a',label,'secondary-button');link.href='?inquiryPage='+number+'#/inquiries';pagination.append(link);}panel.append(pagination);
     }else{
       const item=result.inquiry;panel.append(text('h2',item.title),text('p','문의일 '+date(item.createdAt),'muted'),text('div',item.body,'notice-body'),text('h3',item.answered?'관리자 답변':'답변 대기'),text('div',item.answer||'관리자가 확인 후 답변드립니다.','notice-body'));
+      if (item.answered && item.unread) {
+        const read = await fetch('/api/inquiries/' + item.id + '/read/', {method:'POST',mode:'same-origin',headers:{'X-CSRFToken':session.csrfToken},body:new URLSearchParams({answered_at:item.answeredAt || ''})});
+        if (read.ok) window.dispatchEvent(new Event('inquiry-read'));
+      }
       if(item.answeredAt)panel.append(text('p','답변일 '+date(item.answeredAt),'muted'));const back=text('a','목록으로','secondary-button');back.href='#/inquiries';panel.append(back);
     }
   }catch{if(valid())panel.textContent='문의를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}

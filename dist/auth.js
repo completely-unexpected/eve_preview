@@ -41,6 +41,7 @@ async function getSession() {
   return data;
 }
 function renderAccount(data) {
+  accountControls.dataset.username = data.authenticated ? data.user.username : '';
   accountControls.replaceChildren();
   window.dispatchEvent(new Event('account-changed'));
   if (data.authenticated) {
@@ -86,7 +87,13 @@ function renderAccount(data) {
       } catch (error) {notifyAuth(error.message);}
       finally {profileButton.disabled = false;}
     });
-    accountControls.append(name, profileButton, passwordButton, logoutButton);
+    const replies = document.createElement('a');
+    replies.id = 'reply-notification';
+    replies.className = 'text-button gold reply-notification';
+    replies.href = '#/inquiries';
+    replies.setAttribute('aria-live', 'polite');
+    accountControls.append(name, replies, profileButton, passwordButton, logoutButton);
+    updateReplyNotification(data);
   } else {
     for (const [id, label] of [['login', 'Login'], ['signup', 'Sign up']]) {
       const button = document.createElement('button');
@@ -137,3 +144,20 @@ authForms.forEach(form => form.addEventListener('submit', async event => {
 if (['http:', 'https:'].includes(location.protocol)) {
   getSession().then(renderAccount).catch(() => notifyAuth('회원 서버 연결을 확인해 주세요. 로그인 상태를 가져오지 못했습니다.'));
 }
+
+function updateReplyNotification(data) {
+  const badge = document.querySelector('#reply-notification');
+  if (!badge || !data.authenticated || accountControls.dataset.username !== data.user.username) return;
+  badge.hidden = !data.unreadReplies;
+  badge.textContent = data.unreadReplies ? '새 답변 ' + data.unreadReplies + '건' : '';
+}
+function refreshReplyNotification() {
+  if (document.hidden || !accountControls.dataset.username) return;
+  getSession().then(data => {
+    if (!data.authenticated) renderAccount(data);
+    else updateReplyNotification(data);
+  }).catch(() => {});
+}
+window.addEventListener('inquiry-read', refreshReplyNotification);
+document.addEventListener('visibilitychange', refreshReplyNotification);
+setInterval(refreshReplyNotification, 30000);
