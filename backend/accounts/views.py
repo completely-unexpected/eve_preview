@@ -12,6 +12,14 @@ from django.views.decorators.http import require_GET, require_POST
 
 from .forms import SignupForm, ProfileForm
 from .models import User
+from . import throttle
+
+
+def login_limited(seconds):
+    minutes = (seconds + 59) // 60
+    response = JsonResponse({"ok": False, "message": f"로그인에 5회 실패하여 잠시 제한되었습니다. 약 {minutes}분 후 다시 시도해 주세요.", "retryAfter": seconds}, status=429)
+    response["Retry-After"] = str(seconds)
+    return response
 
 
 def session_data(request):
@@ -58,15 +66,24 @@ def signup(request):
 @require_POST
 @csrf_protect
 def login(request):
+    key = throttle.key_for(request)
+    seconds = throttle.remaining(key)
+    if seconds:
+        return login_limited(seconds)
     form = AuthenticationForm(request, data=request.POST)
     if not form.is_valid():
         candidate = User.objects.filter(username=request.POST.get("username", "")).first()
         if candidate and not candidate.is_active and candidate.check_password(request.POST.get("password", "")):
+            throttle.clear(key)
             if candidate.account_status == User.Status.PENDING:
                 return JsonResponse({"ok": False, "message": "가입 승인 대기 중입니다. 관리자 승인 후 로그인해 주세요."}, status=403)
             if candidate.account_status == User.Status.SUSPENDED:
                 return JsonResponse({"ok": False, "message": "이용이 정지된 계정입니다. 관리자에게 문의해 주세요."}, status=403)
+        seconds = throttle.failure(key)
+        if seconds:
+            return login_limited(seconds)
         return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
+    throttle.clear(key)
     auth_login(request, form.get_user())
     return JsonResponse(session_data(request))
 

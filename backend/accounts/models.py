@@ -43,3 +43,10 @@ class User(AbstractUser):
             "accounts.User.session_revocation", original + self.session_revoked_at.isoformat(),
             secret=secret, algorithm="sha256",
         ).hexdigest()
+
+
+class LoginThrottle(models.Model):
+    key = models.CharField(max_length=64, primary_key=True)
+    failures = models.PositiveIntegerField(default=0)
+    started_at = models.DateTimeField(default=timezone.now)
+    blocked_until = models.DateTimeField(null=True, blank=True)
