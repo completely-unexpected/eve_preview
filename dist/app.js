@@ -1,18 +1,15 @@
-// Browser-only prototype: no remote API, account storage, or financial transactions.
-const games = [
-  ['powerball', '파워볼', 'POWERBALL', '🎱', '#198daf35', 'ball'],
-  ['ladder', '사다리', 'LADDER', '🪜', '#d59a4535', 'ladder'],
-  ['cards', '카드 게임', 'CARD GAME', '♠', '#dcb45335', 'cards'],
-  ['token', '토큰 게임', 'TOKEN GAME', '🪙', '#379e9b35', 'ball'],
-  ['virtual', '가상 스포츠', 'VIRTUAL SPORTS', '⚽', '#6fa34a35', 'sports'],
-  ['table', '테이블 게임', 'TABLE GAME', '🃏', '#b8606135', 'cards'],
-  ['golden', '골든볼', 'GOLDEN BALL', '🔮', '#a46dd335', 'ball'],
-  ['powerladder', '파워 사다리', 'POWER LADDER', '🪜', '#e76d5135', 'ladder'],
-  ['starladder', '스타 사다리', 'STAR LADDER', '⭐', '#7698cc35', 'ladder'],
-  ['starball', '스타 파워볼', 'STAR POWERBALL', '🎱', '#d3af4535', 'ball'],
-  ['holdem', '홀덤', 'HOLDEM', '♣', '#977fcb35', 'cards'],
-  ['next', '넥스트 게임', 'NEXT GAME', '🎲', '#658cb035', 'ball']
-];
+// Local game catalog and account APIs; external game providers are not connected.
+function escapeGameText(value) {
+  return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+async function readGames(url = '/api/games/') {
+  const response = await fetch(url, {cache:'no-store', mode:'same-origin'});
+  if (response.status === 404) return null;
+  if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('게임 목록을 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.');
+  return response.json();
+}
+function gameValues(game) {return [game.slug,game.name,game.englishName,game.symbol,'#198daf35',game.category];}
+
 const promos = [
   ['WELCOME EVENT', '새로운 시작, 특별한 혜택', '매일 새로운 이벤트를 만나보세요.', '🎁'],
   ['DAILY EVENT', '오늘의 플레이, 오늘의 즐거움', '일상에 즐거운 순간을 더하세요.', '🏆'],
@@ -39,10 +36,14 @@ mapLinks('.shortcuts a', ['sports', 'inplay', 'esports', 'casino']);
 mapLinks('.feature-strip a', ['sports', 'inplay', 'casino', 'events']);
 mapLinks('.category-card', ['sports', 'inplay', 'esports', 'casino']);
 function gameCard(game) {
-  const [id, name, english, symbol, glow] = game;
+  const [id, name, english, symbol, glow] = game.map(escapeGameText);
   return `<a class="game-card" href="#/games/${id}"><span class="game-tile" style="--glow:${glow}"><span class="game-mark">EVE</span><span class="game-symbol" aria-hidden="true">${symbol}</span><strong>${name}</strong></span><span class="game-label">${english}</span></a>`;
 }
-document.querySelector('#game-grid').innerHTML = games.map(gameCard).join('');
+const homeGames = document.querySelector('#game-grid');
+homeGames.textContent = '게임 목록을 불러오는 중…';
+readGames().then(data => {
+  homeGames.innerHTML = data.items.length ? data.items.map(game => gameCard(gameValues(game))).join('') : '<p class="empty-state">게시된 게임이 없습니다.</p>';
+}).catch(error => homeGames.textContent = error.message);
 function updateClock() {
   document.querySelector('#clock').textContent = '◷ ' + new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', dateStyle: 'medium', timeStyle: 'medium' }).format(new Date());
 }
@@ -92,9 +93,14 @@ function pageHeading(title, description, back = 'home', backLabel = '홈으로')
   return `<a class="back-link" href="#/${back}">← ${backLabel}</a><div class="route-heading"><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`;
 }
 function emptyMessage() { return '<p class="empty-state" role="status">조건에 맞는 항목이 없습니다. 검색어나 필터를 바꿔 주세요.</p>'; }
-function renderGames() {
+async function renderGames() {
   routeView.innerHTML = pageHeading('게임 목록', '원하는 게임을 검색하거나 종류별로 찾아보세요.') +
     '<div class="route-tools"><label>게임 검색<input id="game-search" type="search" placeholder="게임 이름을 입력하세요"></label><label>종류<select id="game-type"><option value="all">전체</option><option value="ball">볼 게임</option><option value="ladder">사다리</option><option value="cards">카드 게임</option><option value="sports">스포츠</option></select></label></div><p id="game-count" class="muted" aria-live="polite"></p><div class="game-grid route-game-grid" id="filtered-games"></div>';
+  const panel = routeView.querySelector('#filtered-games');
+  panel.textContent = '게임 목록을 불러오는 중…';
+  let games;
+  try {const result = await readGames(); if (!panel.isConnected) return; games = result.items.map(gameValues);}
+  catch (error) {if (panel.isConnected) panel.textContent = error.message; return;}
   function filter() {
     const query = document.querySelector('#game-search').value.trim().toLowerCase();
     const kind = document.querySelector('#game-type').value;
@@ -106,12 +112,21 @@ function renderGames() {
   document.querySelector('#game-type').addEventListener('change', filter);
   filter();
 }
-function renderGame(id) {
-  const game = games.find(item => item[0] === id);
-  if (!game) return renderNotFound();
-  const [, name, english, symbol] = game;
-  routeView.innerHTML = pageHeading(name, english, 'games', '게임 목록으로') + `<div class="detail-panel game-detail"><div class="detail-symbol" aria-hidden="true">${symbol}</div><h2>${name}</h2><p>게임 목록에서 선택한 게임의 상세 화면입니다.</p><div class="sample-notice">게임 API가 아직 연결되지 않았습니다. 실제 게임 실행은 제공하지 않습니다.</div><button class="primary-button" id="game-information">게임 이용 안내</button><a class="secondary-button" href="#/games">다른 게임 보기</a></div>`;
-  document.querySelector('#game-information').addEventListener('click', () => showInfo(name + ' 이용 안내', '게임 제공업체 API 연동 후 이 화면에서 게임을 실행할 수 있도록 연결할 예정입니다. 현재는 게임 선택과 화면 이동만 제공됩니다.'));
+async function renderGame(id) {
+  routeView.innerHTML = pageHeading('게임 상세', '게임 정보를 확인하세요.', 'games', '게임 목록으로') + '<div id="game-detail-panel" class="detail-panel game-detail">불러오는 중…</div>';
+  const panel = routeView.querySelector('#game-detail-panel');
+  try {
+    const result = await readGames('/api/games/' + encodeURIComponent(id) + '/');
+    if (!panel.isConnected) return;
+    if (!result) {panel.textContent = '게임을 찾을 수 없습니다.'; return;}
+    const game = result.game;
+    const name = escapeGameText(game.name);
+    panel.innerHTML = `<div class="detail-symbol" aria-hidden="true">${escapeGameText(game.symbol)}</div><h2>${name}</h2><p class="notice-body">${escapeGameText(game.description || '등록된 게임 안내가 없습니다.')}</p><div class="sample-notice">게임 API가 아직 연결되지 않았습니다. 실제 게임 실행은 제공하지 않습니다.</div><button class="primary-button" id="game-information">게임 이용 안내</button><a class="secondary-button" href="#/games">다른 게임 보기</a>`;
+    const heading = routeView.querySelector('.route-heading h1'); heading.textContent = game.name;
+    routeView.querySelector('.route-heading p').textContent = game.englishName;
+    document.title = game.name + ' — EVE';
+    panel.querySelector('#game-information').addEventListener('click', () => showInfo(game.name + ' 이용 안내', '게임 제공업체 API 연동 후 이 화면에서 게임을 실행할 수 있도록 연결할 예정입니다. 현재는 게임 선택과 화면 이동만 제공됩니다.'));
+  } catch (error) {if (panel.isConnected) panel.textContent = error.message;}
 }
 function eventCards() {
   return promos.map(([tag, title, description, symbol], i) => `<a class="event-card detail-panel" href="#/events/${i}"><span class="event-symbol" aria-hidden="true">${symbol}</span><span class="eyebrow">${tag}</span><h2>${title}</h2><p>${description}</p><span class="gold">상세 보기 →</span></a>`).join('');
