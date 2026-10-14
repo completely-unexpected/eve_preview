@@ -55,6 +55,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'wallet.apps.WalletConfig',
+    'sportsfeed.apps.SportsFeedConfig',
+    'attendance.apps.AttendanceConfig',
     'board.apps.BoardConfig',
     'events.apps.EventsConfig',
     'catalog.apps.CatalogConfig',
@@ -151,3 +154,12 @@ MAILERS = {
 }
 AUTH_USER_MODEL = "accounts.User"
 CSRF_FAILURE_VIEW = "accounts.views.csrf_failure"
+
+
+# Server-only provider credentials. Never include this value in frontend responses.
+ODDS_API_KEY = os.environ.get("ODDS_API_KEY", "").strip()
+if not ODDS_API_KEY:
+    try:
+        ODDS_API_KEY = (BASE_DIR / ".local-odds-api-key").read_text(encoding="utf-8-sig").strip()
+    except FileNotFoundError:
+        ODDS_API_KEY = ""

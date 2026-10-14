@@ -135,3 +135,18 @@ def csrf_failure(request, reason=""):
     if request.path.startswith("/api/accounts/"):
         return JsonResponse({"ok": False, "message": "보안 확인이 만료되었습니다. 새로고침한 뒤 다시 시도해 주세요."}, status=403)
     return default_csrf_failure(request, reason=reason)
+
+
+@never_cache
+@require_GET
+def details(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "message": "로그인 후 회원정보를 확인해 주세요."}, status=401)
+    user = request.user
+    level = user.level
+    return JsonResponse({
+        "ok": True,
+        "user": {"username": user.username, "nickname": user.nickname, "joinedAt": user.date_joined.isoformat(),
+                 "level": level.number if level else 1, "levelName": level.name if level else "기본", "status": user.get_account_status_display()},
+        "limits": user.effective_limits(),
+    })

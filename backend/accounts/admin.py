@@ -3,19 +3,20 @@ from django.contrib.auth.admin import UserAdmin
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 
-from .models import User
+from .models import User, MemberLevel
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ("회원 정보", {"fields": ("nickname", "account_status")}),
+        ("회원 정보", {"fields": ("nickname", "account_status", "level")}),
     )
+    fieldsets += (("회원별 예외 이용한도", {"fields": ("single_min", "single_max", "single_payout", "multi_min", "multi_max", "multi_payout"), "description": "빈칸은 레벨별 한도를 사용합니다. 회원 화면에서는 관리자 설정을 조회합니다."}),)
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ("회원 정보", {"fields": ("nickname", "account_status")}),
+        ("회원 정보", {"fields": ("nickname", "account_status", "level")}),
     )
-    list_display = ("username", "nickname", "account_status", "is_active", "is_staff", "date_joined")
-    list_filter = ("account_status", "is_staff", "is_superuser")
+    list_display = ("username", "nickname", "account_status", "level", "is_active", "is_staff", "date_joined")
+    list_filter = ("account_status", "level", "is_staff", "is_superuser")
     search_fields = ("username", "nickname", "email")
     readonly_fields = ("is_active",)
     actions = ("approve_members", "suspend_members", "restore_members")
@@ -55,3 +56,17 @@ class CustomUserAdmin(UserAdmin):
     @admin.action(description="선택한 정지 회원 이용 재개", permissions=("change",))
     def restore_members(self, request, queryset):
         self._change_status(request, queryset, User.Status.SUSPENDED, User.Status.APPROVED, "이용 재개")
+
+
+@admin.register(MemberLevel)
+class MemberLevelAdmin(admin.ModelAdmin):
+    list_display = ["number", "name", "single_min", "single_max", "single_payout", "multi_min", "multi_max", "multi_payout"]
+    fields = ["number", "name", "single_min", "single_max", "single_payout", "multi_min", "multi_max", "multi_payout"]
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("number",) if obj else ()
+
+    def has_delete_permission(self, request, obj=None):
+        if obj and obj.number == 1:
+            return False
+        return super().has_delete_permission(request, obj)

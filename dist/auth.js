@@ -67,32 +67,22 @@ function renderAccount(data) {
       } catch (error) {notifyAuth(error.message || '연결 오류입니다. 다시 시도해 주세요.');}
       finally {logoutButton.disabled = false;}
     });
-    const passwordButton = document.createElement('button');
-    passwordButton.className = 'text-button';
-    passwordButton.id = 'password-change-button';
-    passwordButton.textContent = '비밀번호 변경';
-    passwordButton.addEventListener('click', () => openDialog('password-change'));
-    const profileButton = document.createElement('button');
-    profileButton.className = 'text-button';
-    profileButton.id = 'profile-button';
-    profileButton.textContent = '회원정보 수정';
-    profileButton.addEventListener('click', async () => {
-      profileButton.disabled = true;
-      try {
-        const current = await getSession();
-        renderAccount(current);
-        if (!current.authenticated) {notifyAuth('로그인 후 회원정보를 수정해 주세요.'); return;}
-        openDialog('profile');
-        document.querySelector('#profile [name="nickname"]').value = current.user.nickname;
-      } catch (error) {notifyAuth(error.message);}
-      finally {profileButton.disabled = false;}
-    });
     const replies = document.createElement('a');
     replies.id = 'reply-notification';
     replies.className = 'text-button gold reply-notification';
     replies.href = '#/inquiries';
     replies.setAttribute('aria-live', 'polite');
-    accountControls.append(name, replies, profileButton, passwordButton, logoutButton);
+    const pointLink = document.createElement('a');
+    pointLink.id = 'point-convert-link';
+    pointLink.className = 'text-button gold';
+    pointLink.href = '#/wallet/convert';
+    pointLink.textContent = '포인트 전환';
+    const attendanceLink = document.createElement('a');
+    attendanceLink.id = 'attendance-link';
+    attendanceLink.className = 'text-button';
+    attendanceLink.href = '#/attendance';
+    attendanceLink.textContent = '출석체크';
+    accountControls.append(attendanceLink, pointLink, name, replies, logoutButton);
     updateReplyNotification(data);
   } else {
     for (const [id, label] of [['login', 'Login'], ['signup', 'Sign up']]) {

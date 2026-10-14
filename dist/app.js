@@ -27,7 +27,7 @@ const routeView = document.createElement('section');
 routeView.className = 'route-view content';
 routeView.hidden = true;
 main.append(routeView);
-const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices', INQUIRIES: 'inquiries', BOARD: 'board' };
+const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices', INQUIRIES: 'inquiries', BOARD: 'board', WALLET: 'wallet', ATTENDANCE: 'attendance' };
 document.querySelectorAll('nav a').forEach(link => link.href = '#/' + menuRoutes[link.dataset.section]);
 document.querySelectorAll('a.logo').forEach(link => link.href = '#/home');
 document.querySelector('.hero-button').href = '#/games';
@@ -185,74 +185,6 @@ function renderCasino() {
   }));
   filter('all');
 }
-const fixtures = [
-  { id: 'football-1', type: 'football', league: '샘플 축구 리그', home: '한강 FC', away: '오로라 FC', time: '19:00', odds: [2.2, 3.6, 2.88], live: true, score: '1 : 1' },
-  { id: 'football-2', type: 'football', league: '샘플 축구 리그', home: '블루 FC', away: '레드 FC', time: '20:00', odds: [1.8, 3.2, 4.1], live: false, score: '—' },
-  { id: 'basketball-1', type: 'basketball', league: '샘플 농구 리그', home: '서울 스타즈', away: '부산 웨이브', time: '18:30', odds: [1.7, 2.3], live: true, score: '42 : 38' },
-  { id: 'tennis-1', type: 'tennis', league: '샘플 테니스 경기', home: '선수 A', away: '선수 B', time: '21:00', odds: [1.9, 1.9], live: false, score: '—' },
-  { id: 'esports-1', type: 'esports', league: '샘플 e스포츠 리그', home: '팀 오리온', away: '팀 루나', time: '19:30', odds: [2.06, 1.73], live: true, score: '1 : 0' },
-  { id: 'esports-2', type: 'esports', league: '샘플 e스포츠 리그', home: '팀 노바', away: '팀 코멧', time: '22:00', odds: [1.65, 2.4], live: false, score: '—' }
-];
-const selection = new Map();
-function marketLabels(match) { return match.odds.length === 3 ? ['홈', '무승부', '원정'] : ['홈', '원정']; }
-function renderSports(mode) {
-  const titles = { sports: '스포츠', inplay: '인플레이', esports: 'E-스포츠' };
-  const available = fixtures.filter(match => mode === 'esports' ? match.type === 'esports' : match.type !== 'esports' && (mode !== 'inplay' || match.live));
-  const types = mode === 'esports' ? [['esports', 'E-스포츠']] : [['football', '축구'], ['basketball', '농구'], ['tennis', '테니스']];
-  routeView.innerHTML = pageHeading(titles[mode], '샘플 경기 데이터입니다. 실제 경기·실시간 정보·베팅 서비스와 연결되지 않았습니다.') + '<div class="route-tools"><label>경기 검색<input id="match-search" type="search" placeholder="팀 또는 리그 이름"></label><label>종목<select id="match-type"><option value="all">전체</option>' + types.map(([id, name]) => `<option value="${id}">${name}</option>`).join('') + '</select></label></div><div class="sports-layout"><div><p id="match-count" class="muted" aria-live="polite"></p><div id="match-list"></div></div><section class="detail-panel" id="match-detail" aria-label="경기 상세"></section><aside class="detail-panel selection-panel"><h2>선택 목록</h2><p class="small muted">화면 동작 확인용 · 주문·베팅되지 않습니다</p><div id="selection-list"></div><button class="secondary-button" id="clear-selection">모두 비우기</button></aside></div>';
-  function showMatch(match) {
-    const panel = document.querySelector('#match-detail');
-    panel.innerHTML = `<span class="eyebrow">${match.live ? '샘플 진행 중' : '샘플 예정 경기'}</span><h2>${match.home}<br><span class="muted">vs</span><br>${match.away}</h2><p>${match.league} · ${match.time}</p>${mode === 'inplay' ? `<p class="sample-score">${match.score}</p>` : ''}<h3>선택 항목</h3><div class="odds-list">` + match.odds.map((odd, index) => `<button class="market-button" data-market="${index}" aria-pressed="false"><span>${marketLabels(match)[index]}</span><strong>${odd.toFixed(2)}</strong></button>`).join('') + '</div><p class="small muted">수치는 고정 샘플이며 실시간으로 갱신되지 않습니다.</p>';
-    function refreshMarketStates() {
-      panel.querySelectorAll('[data-market]').forEach(button => button.setAttribute('aria-pressed', String(selection.has(match.id + ':' + button.dataset.market))));
-    }
-    panel.querySelectorAll('[data-market]').forEach(button => button.addEventListener('click', () => {
-      const index = Number(button.dataset.market);
-      const key = match.id + ':' + index;
-      if (selection.has(key)) selection.delete(key);
-      else selection.set(key, { match, label: marketLabels(match)[index], odd: match.odds[index] });
-      renderSelection();
-      refreshMarketStates();
-    }));
-    refreshMarketStates();
-  }
-  function renderSelection() {
-    const list = document.querySelector('#selection-list');
-    list.innerHTML = selection.size ? [...selection].map(([key, item]) => `<div class="selection-item"><strong>${item.match.home} vs ${item.match.away}</strong><span>${item.label} · ${item.odd.toFixed(2)}</span><button class="text-button gold" data-remove="${key}" aria-label="${item.match.home} 선택 삭제">삭제</button></div>`).join('') : '<p class="empty-state">선택 목록이 비어 있습니다.</p>';
-    list.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', () => {
-      selection.delete(button.dataset.remove);
-      renderSelection();
-      routeView.querySelectorAll('[data-market]').forEach(item => {
-        // Refresh the selected match via its current detail key.
-        const match = fixtures.find(fixture => fixture.id === document.querySelector('#match-detail').dataset.matchId);
-        if (match) item.setAttribute('aria-pressed', String(selection.has(match.id + ':' + item.dataset.market)));
-      });
-    }));
-  }
-  function openMatch(match) {
-    document.querySelector('#match-detail').dataset.matchId = match.id;
-    showMatch(match);
-  }
-  function filter() {
-    const query = document.querySelector('#match-search').value.trim().toLowerCase();
-    const type = document.querySelector('#match-type').value;
-    const filtered = available.filter(match => (type === 'all' || match.type === type) && (match.home + match.away + match.league).toLowerCase().includes(query));
-    document.querySelector('#match-count').textContent = filtered.length + '개의 샘플 경기';
-    document.querySelector('#match-list').innerHTML = filtered.length ? filtered.map(match => `<button class="match-row" data-match="${match.id}"><span class="small muted">${match.league} · ${match.time}</span><strong>${match.home} vs ${match.away}</strong><span class="gold">${mode === 'inplay' ? match.score : '상세 보기 →'}</span></button>`).join('') : emptyMessage();
-    routeView.querySelectorAll('[data-match]').forEach(button => button.addEventListener('click', () => openMatch(fixtures.find(match => match.id === button.dataset.match))));
-    if (filtered.length) openMatch(filtered[0]);
-    else document.querySelector('#match-detail').innerHTML = emptyMessage();
-  }
-  document.querySelector('#match-search').addEventListener('input', filter);
-  document.querySelector('#match-type').addEventListener('change', filter);
-  document.querySelector('#clear-selection').addEventListener('click', () => {
-    selection.clear();
-    renderSelection();
-    routeView.querySelectorAll('[data-market]').forEach(button => button.setAttribute('aria-pressed', 'false'));
-  });
-  filter();
-  renderSelection();
-}
 async function renderNotices(id) {
   const currentHash = location.hash;
   routeView.innerHTML = pageHeading('공지사항', '사이트 소식과 이용 안내를 확인하세요.') + '<div id="notice-content" class="detail-panel" aria-live="polite">불러오는 중…</div>';
@@ -293,31 +225,6 @@ async function renderNotices(id) {
     }
   } catch {if (panel.isConnected) panel.textContent = '공지사항을 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}
 }
-let accountPageRequest = 0;
-async function renderAccountPage() {
-  const requestId = ++accountPageRequest;
-  routeView.innerHTML = pageHeading('내 계정', '회원정보와 계정 기능을 확인하세요.') + '<div id="account-page" class="detail-panel" aria-live="polite">불러오는 중…</div>';
-  const panel = routeView.querySelector('#account-page');
-  const valid = () => requestId === accountPageRequest && panel.isConnected;
-  try {
-    const response = await fetch('/api/accounts/session/', {cache:'no-store',mode:'same-origin',credentials:'same-origin'});
-    if (!response.ok) throw new Error();
-    const data = await response.json();
-    if (!valid()) return;
-    if (!data.authenticated) {
-      panel.innerHTML = '<p>로그인 후 내 계정을 확인해 주세요.</p><button id="account-login" class="secondary-button" type="button">로그인</button>';
-      panel.querySelector('button').addEventListener('click', () => openDialog('login'));
-      return;
-    }
-    panel.innerHTML = '<dl class="account-details"><dt>아이디</dt><dd id="account-username"></dd><dt>닉네임</dt><dd id="account-nickname"></dd><dt>가입일</dt><dd id="account-joined"></dd></dl><div class="detail-actions"><button id="account-edit" class="secondary-button" type="button">회원정보 수정</button><button id="account-password" class="secondary-button" type="button">비밀번호 변경</button><a class="secondary-button" href="#/inquiries">내 문의</a></div>';
-    panel.querySelector('#account-username').textContent = data.user.username;
-    panel.querySelector('#account-nickname').textContent = data.user.nickname || '등록된 닉네임이 없습니다.';
-    panel.querySelector('#account-joined').textContent = new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium'}).format(new Date(data.user.joinedAt));
-    panel.querySelector('#account-edit').addEventListener('click', () => document.querySelector('#profile-button')?.click());
-    panel.querySelector('#account-password').addEventListener('click', () => openDialog('password-change'));
-  } catch {if (valid()) panel.textContent = '계정 정보를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}
-}
-window.addEventListener('account-changed', () => {if (location.hash === '#/account') renderAccountPage();});
 function renderNotFound() {
   routeView.innerHTML = pageHeading('페이지를 찾을 수 없습니다', '메뉴에서 원하는 화면을 다시 선택해 주세요.') + '<a class="primary-button" href="#/home">홈으로 돌아가기</a>';
 }
@@ -341,6 +248,8 @@ function route() {
     else if (page === 'inquiries') renderInquiries(detail);
     else if (page === 'account' && detail === undefined) renderAccountPage();
     else if (page === 'board') renderBoard(detail);
+    else if (page === 'wallet') renderWallet(detail);
+    else if (page === 'attendance') renderAttendance(detail);
     else if (page === 'notices') renderNotices(detail);
     else if (page === 'casino' && detail === undefined) renderCasino();
     else if (['sports', 'inplay', 'esports'].includes(page) && detail === undefined) renderSports(page);
