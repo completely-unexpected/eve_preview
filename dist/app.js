@@ -87,11 +87,7 @@ document.querySelectorAll('dialog').forEach(dialog => {
   });
   dialog.addEventListener('close', () => dialog.querySelector('form')?.reset());
 });
-document.querySelectorAll('form').forEach(form => form.addEventListener('submit', event => {
-  event.preventDefault();
-  form.reset();
-  showInfo('화면 시안 안내', '실제 로그인·회원가입은 백엔드 연결 후 제공됩니다. 입력한 내용은 저장하거나 전송하지 않았습니다.');
-}));
+// Real account form submissions are handled in auth.js.
 function pageHeading(title, description, back = 'home', backLabel = '홈으로') {
   return `<a class="back-link" href="#/${back}">← ${backLabel}</a><div class="route-heading"><h1 tabindex="-1">${title}</h1><p>${description}</p></div>`;
 }

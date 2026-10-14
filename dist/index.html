@@ -6,7 +6,9 @@
   <title>EVE — 메인 화면 시안</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="functionality.css">
+  <link rel="stylesheet" href="auth.css">
   <script src="app.js" defer></script>
+  <script src="auth.js" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -22,8 +24,8 @@
     </div>
   </main>
   <footer><a class="logo" href="#home">EVE</a><p>스포츠와 게임, 새로운 즐거움을 만나는 공간.</p><small>메인 화면 디자인 시안 · 실제 게임 및 금전 거래 기능 없음</small><p class="copyright">© 2026 EVE PREVIEW</p></footer>
-  <dialog id="login"><button class="modal-close" aria-label="닫기">×</button><span class="logo">EVE</span><h2>로그인</h2><form><label>아이디<input autocomplete="off" placeholder="아이디를 입력하세요" required></label><label>비밀번호<input type="password" autocomplete="off" placeholder="비밀번호를 입력하세요" required></label><button class="primary" type="submit">로그인</button></form><p class="modal-note">디자인 확인용입니다. 실제 계정 정보를 입력하지 마세요.</p><button class="text-button gold" data-open="signup">회원가입</button></dialog>
-  <dialog id="signup"><button class="modal-close" aria-label="닫기">×</button><span class="logo">EVE</span><h2>회원가입</h2><form><label>아이디<input placeholder="아이디를 입력하세요" autocomplete="off" required></label><label>비밀번호<input type="password" placeholder="비밀번호를 입력하세요" autocomplete="off" required></label><label>비밀번호 확인<input type="password" placeholder="비밀번호를 다시 입력하세요" autocomplete="off" required></label><label>닉네임<input placeholder="닉네임을 입력하세요" autocomplete="off" required></label><button class="primary" type="submit">가입완료</button></form><p class="modal-note">화면 시안이며 입력 내용은 저장하거나 전송하지 않습니다.</p></dialog>
+  <dialog id="login" aria-labelledby="login-title"><button class="modal-close" aria-label="닫기">×</button><span class="logo">EVE</span><h2 id="login-title">로그인</h2><form><label>아이디<input name="username" autocomplete="username" maxlength="150" placeholder="아이디를 입력하세요" required></label><label>비밀번호<input name="password" type="password" autocomplete="current-password" placeholder="비밀번호를 입력하세요" required></label><button class="primary" type="submit">로그인</button></form><p class="modal-note">가입한 아이디와 비밀번호로 로그인하세요.</p><button class="text-button gold" data-open="signup">회원가입</button></dialog>
+  <dialog id="signup" aria-labelledby="signup-title"><button class="modal-close" aria-label="닫기">×</button><span class="logo">EVE</span><h2 id="signup-title">회원가입</h2><form><label>아이디<input name="username" autocomplete="username" maxlength="150" placeholder="아이디를 입력하세요" required></label><label>비밀번호<input name="password1" type="password" autocomplete="new-password" placeholder="8자 이상, 쉽게 추측하기 어려운 비밀번호" required></label><label>비밀번호 확인<input name="password2" type="password" autocomplete="new-password" placeholder="비밀번호를 다시 입력하세요" required></label><label>닉네임<input name="nickname" maxlength="30" autocomplete="nickname" placeholder="닉네임을 입력하세요" required></label><button class="primary" type="submit">가입완료</button></form><p class="modal-note">가입이 완료되면 자동으로 로그인됩니다.</p></dialog>
   <dialog id="info"><button class="modal-close" aria-label="닫기">×</button><span class="eyebrow">EVE PREVIEW</span><h2 id="info-title"></h2><p id="info-description"></p><button class="primary modal-close-action">확인</button></dialog>
 </body>
 </html>
