@@ -105,7 +105,7 @@ authForms.forEach(form => form.addEventListener('submit', async event => {
     renderAccount(result);
     form.reset();
     form.closest('dialog').close();
-    notifyAuth(action === 'signup' ? '회원가입이 완료되었습니다. 로그인되었습니다.' : '로그인되었습니다.');
+    notifyAuth(result.message || (action === 'signup' ? '가입 신청이 완료되었습니다. 관리자 승인 후 로그인해 주세요.' : '로그인되었습니다.'));
   } catch (error) {
     showAuthErrors(form, [error.message || '연결 오류입니다. 잠시 후 다시 시도해 주세요.']);
   } finally {submit.disabled = false; submit.textContent = caption;}

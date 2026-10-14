@@ -10,6 +10,7 @@ from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_POST
 
 from .forms import SignupForm
+from .models import User
 
 
 def session_data(request):
@@ -41,11 +42,14 @@ def signup(request):
         return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
     try:
         with transaction.atomic():
-            user = form.save()
+            user = form.save(commit=False)
+            user.account_status = User.Status.PENDING
+            user.save()
     except IntegrityError:
         return JsonResponse({"ok": False, "message": "아이디가 이미 사용 중입니다. 다른 아이디를 입력해 주세요."}, status=409)
-    auth_login(request, user)
-    return JsonResponse(session_data(request), status=201)
+    data = session_data(request)
+    data.update({"approvalRequired": True, "message": "가입 신청이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다."})
+    return JsonResponse(data, status=201)
 
 
 @never_cache
@@ -55,6 +59,12 @@ def signup(request):
 def login(request):
     form = AuthenticationForm(request, data=request.POST)
     if not form.is_valid():
+        candidate = User.objects.filter(username=request.POST.get("username", "")).first()
+        if candidate and not candidate.is_active and candidate.check_password(request.POST.get("password", "")):
+            if candidate.account_status == User.Status.PENDING:
+                return JsonResponse({"ok": False, "message": "가입 승인 대기 중입니다. 관리자 승인 후 로그인해 주세요."}, status=403)
+            if candidate.account_status == User.Status.SUSPENDED:
+                return JsonResponse({"ok": False, "message": "이용이 정지된 계정입니다. 관리자에게 문의해 주세요."}, status=403)
         return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
     auth_login(request, form.get_user())
     return JsonResponse(session_data(request))
