@@ -42,6 +42,7 @@ async function getSession() {
 }
 function renderAccount(data) {
   accountControls.replaceChildren();
+  window.dispatchEvent(new Event('account-changed'));
   if (data.authenticated) {
     const name = document.createElement('span');
     name.className = 'account-name';

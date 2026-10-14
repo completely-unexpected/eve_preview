@@ -50,3 +50,5 @@
 
 .notice-row{display:flex;justify-content:space-between;gap:16px;padding:18px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.notice-row time{flex-shrink:0;color:var(--muted);font-size:12px}.notice-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.9;margin:24px 0}@media(max-width:650px){.notice-row{flex-direction:column;gap:8px}}
 nav{align-items:center}nav a{display:inline-flex;align-items:center;line-height:1.4;white-space:nowrap}
+
+#inquiry-form label{display:block;margin:18px 0}#inquiry-form input,#inquiry-form textarea{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:4px;background:#293744;color:var(--text);font:inherit}#inquiry-form textarea{resize:vertical}#inquiry-content h2{overflow-wrap:anywhere}

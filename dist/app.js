@@ -28,7 +28,7 @@ const routeView = document.createElement('section');
 routeView.className = 'route-view content';
 routeView.hidden = true;
 main.append(routeView);
-const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices' };
+const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices', INQUIRIES: 'inquiries' };
 document.querySelectorAll('nav a').forEach(link => link.href = '#/' + menuRoutes[link.dataset.section]);
 document.querySelectorAll('a.logo').forEach(link => link.href = '#/home');
 document.querySelector('.hero-button').href = '#/games';
@@ -274,6 +274,7 @@ function route() {
     if (parts.length > 2) renderNotFound();
     else if (page === 'games') detail === undefined ? renderGames() : renderGame(detail);
     else if (page === 'events') renderEvents(detail);
+    else if (page === 'inquiries') renderInquiries(detail);
     else if (page === 'notices') renderNotices(detail);
     else if (page === 'casino' && detail === undefined) renderCasino();
     else if (['sports', 'inplay', 'esports'].includes(page) && detail === undefined) renderSports(page);
