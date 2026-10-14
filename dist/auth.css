@@ -8,3 +8,5 @@ button:disabled{cursor:wait;opacity:.65}
 #profile-button{margin-right:16px}
 .header-sub>div{display:flex;align-items:center;flex-wrap:wrap;gap:8px 0}
 @media(max-width:650px){.header-sub{height:auto;min-height:34px;flex-wrap:wrap;gap:8px;padding-top:8px;padding-bottom:8px}.header-sub>div{justify-content:flex-end;margin-left:auto}}
+
+.account-name:hover{color:var(--gold)}.account-details{display:grid;grid-template-columns:90px minmax(0,1fr);gap:20px;margin:0 0 30px}.account-details dt{color:var(--muted)}.account-details dd{margin:0;overflow-wrap:anywhere}

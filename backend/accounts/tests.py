@@ -325,3 +325,19 @@ class ProfileTests(TestCase):
         self.assertEqual(self.client.post("/api/accounts/profile/", {"nickname": "변경"}).status_code, 403)
         token = self.client.get("/api/accounts/session/").json()["csrfToken"]
         self.assertEqual(self.client.post("/api/accounts/profile/", {"nickname": "변경"}, HTTP_X_CSRFTOKEN=token, HTTP_ORIGIN="https://external.example").status_code, 403)
+
+
+class AccountPageTests(TestCase):
+    def test_session_shows_only_current_member_public_profile(self):
+        user=get_user_model().objects.create_user(username="my_account",nickname="내 닉네임",password="Orbit!2026-Account")
+        get_user_model().objects.create_user(username="other_account",nickname="다른 회원")
+        self.client.force_login(user)
+        response=self.client.get("/api/accounts/session/")
+        self.assertEqual(response.json()["user"],{"username":user.username,"nickname":user.nickname,"joinedAt":user.date_joined.isoformat()})
+        self.assertIn("no-store",response["Cache-Control"])
+
+    def test_logged_out_session_exposes_no_profile(self):
+        user=get_user_model().objects.create_user(username="my_account")
+        self.client.force_login(user)
+        self.client.post("/api/accounts/logout/")
+        self.assertIsNone(self.client.get("/api/accounts/session/").json()["user"])

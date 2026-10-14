@@ -293,6 +293,31 @@ async function renderNotices(id) {
     }
   } catch {if (panel.isConnected) panel.textContent = '공지사항을 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}
 }
+let accountPageRequest = 0;
+async function renderAccountPage() {
+  const requestId = ++accountPageRequest;
+  routeView.innerHTML = pageHeading('내 계정', '회원정보와 계정 기능을 확인하세요.') + '<div id="account-page" class="detail-panel" aria-live="polite">불러오는 중…</div>';
+  const panel = routeView.querySelector('#account-page');
+  const valid = () => requestId === accountPageRequest && panel.isConnected;
+  try {
+    const response = await fetch('/api/accounts/session/', {cache:'no-store',mode:'same-origin',credentials:'same-origin'});
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    if (!valid()) return;
+    if (!data.authenticated) {
+      panel.innerHTML = '<p>로그인 후 내 계정을 확인해 주세요.</p><button id="account-login" class="secondary-button" type="button">로그인</button>';
+      panel.querySelector('button').addEventListener('click', () => openDialog('login'));
+      return;
+    }
+    panel.innerHTML = '<dl class="account-details"><dt>아이디</dt><dd id="account-username"></dd><dt>닉네임</dt><dd id="account-nickname"></dd><dt>가입일</dt><dd id="account-joined"></dd></dl><div class="detail-actions"><button id="account-edit" class="secondary-button" type="button">회원정보 수정</button><button id="account-password" class="secondary-button" type="button">비밀번호 변경</button><a class="secondary-button" href="#/inquiries">내 문의</a></div>';
+    panel.querySelector('#account-username').textContent = data.user.username;
+    panel.querySelector('#account-nickname').textContent = data.user.nickname || '등록된 닉네임이 없습니다.';
+    panel.querySelector('#account-joined').textContent = new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',dateStyle:'medium'}).format(new Date(data.user.joinedAt));
+    panel.querySelector('#account-edit').addEventListener('click', () => document.querySelector('#profile-button')?.click());
+    panel.querySelector('#account-password').addEventListener('click', () => openDialog('password-change'));
+  } catch {if (valid()) panel.textContent = '계정 정보를 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}
+}
+window.addEventListener('account-changed', () => {if (location.hash === '#/account') renderAccountPage();});
 function renderNotFound() {
   routeView.innerHTML = pageHeading('페이지를 찾을 수 없습니다', '메뉴에서 원하는 화면을 다시 선택해 주세요.') + '<a class="primary-button" href="#/home">홈으로 돌아가기</a>';
 }
@@ -314,6 +339,7 @@ function route() {
     else if (page === 'games') detail === undefined ? renderGames() : renderGame(detail);
     else if (page === 'events') renderEvents(detail);
     else if (page === 'inquiries') renderInquiries(detail);
+    else if (page === 'account' && detail === undefined) renderAccountPage();
     else if (page === 'notices') renderNotices(detail);
     else if (page === 'casino' && detail === undefined) renderCasino();
     else if (['sports', 'inplay', 'esports'].includes(page) && detail === undefined) renderSports(page);

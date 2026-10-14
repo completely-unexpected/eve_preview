@@ -44,7 +44,10 @@ function renderAccount(data) {
   accountControls.replaceChildren();
   window.dispatchEvent(new Event('account-changed'));
   if (data.authenticated) {
-    const name = document.createElement('span');
+    const name = document.createElement('a');
+    name.href = '#/account';
+    name.setAttribute('aria-label', '내 계정');
+    name.title = '내 계정 보기';
     name.className = 'account-name';
     name.textContent = (data.user.nickname || data.user.username) + '님';
     const logoutButton = document.createElement('button');

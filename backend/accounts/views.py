@@ -27,7 +27,7 @@ def session_data(request):
     return {
         "ok": True,
         "authenticated": user.is_authenticated,
-        "user": {"username": user.username, "nickname": user.nickname}
+        "user": {"username": user.username, "nickname": user.nickname, "joinedAt": user.date_joined.isoformat()}
         if user.is_authenticated else None,
         "csrfToken": get_token(request),
     }
