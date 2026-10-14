@@ -1,0 +1,5 @@
+{% extends "admin/index.html" %}
+{% block content %}
+<div class="module" style="padding:16px;margin-bottom:20px"><a href="{% url 'admin_overview' %}" style="font-weight:bold">관리자 현황 보기 →</a><p>회원 승인과 문의 답변 대기 현황을 확인하세요.</p></div>
+{{ block.super }}
+{% endblock %}

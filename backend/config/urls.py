@@ -4,6 +4,7 @@ from django.http import Http404
 from django.urls import include, path
 from django.views.generic import TemplateView
 from django.views.static import serve
+from .dashboard import overview
 
 
 def frontend_asset(request, path, document_root):
@@ -12,6 +13,7 @@ def frontend_asset(request, path, document_root):
     return serve(request, path, document_root=document_root)
 
 urlpatterns = [
+    path("admin/overview/", admin.site.admin_view(overview), name="admin_overview"),
     path("admin/", admin.site.urls),
     path("api/inquiries/", include("inquiries.urls")),
     path("api/games/", include("catalog.urls")),
