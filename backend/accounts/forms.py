@@ -4,6 +4,10 @@ from django.contrib.auth.forms import UserCreationForm
 from .models import User
 
 
+class ProfileForm(forms.Form):
+    nickname = forms.CharField(label="닉네임", max_length=30)
+
+
 class SignupForm(UserCreationForm):
     nickname = forms.CharField(label="닉네임", max_length=30)
 

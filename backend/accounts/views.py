@@ -1,5 +1,6 @@
 from django.contrib.auth import login as auth_login, logout as auth_logout
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.db import IntegrityError, transaction
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
@@ -9,7 +10,7 @@ from django.views.csrf import csrf_failure as default_csrf_failure
 from django.views.decorators.debug import sensitive_post_parameters
 from django.views.decorators.http import require_GET, require_POST
 
-from .forms import SignupForm
+from .forms import SignupForm, ProfileForm
 from .models import User
 
 
@@ -76,6 +77,39 @@ def login(request):
 def logout(request):
     auth_logout(request)
     return JsonResponse(session_data(request))
+
+
+@never_cache
+@sensitive_post_parameters("old_password", "new_password1", "new_password2")
+@require_POST
+@csrf_protect
+def password_change(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "message": "로그인 후 비밀번호를 변경해 주세요."}, status=401)
+    form = PasswordChangeForm(request.user, request.POST)
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
+    user = form.save()
+    update_session_auth_hash(request, user)
+    data = session_data(request)
+    data["message"] = "비밀번호가 변경되었습니다. 다른 기기에서는 다시 로그인해 주세요."
+    return JsonResponse(data)
+
+
+@never_cache
+@require_POST
+@csrf_protect
+def profile(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"ok": False, "message": "로그인 후 회원정보를 수정해 주세요."}, status=401)
+    form = ProfileForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "errors": form.errors.get_json_data()}, status=400)
+    request.user.nickname = form.cleaned_data["nickname"]
+    request.user.save(update_fields=["nickname"])
+    data = session_data(request)
+    data["message"] = "닉네임이 변경되었습니다."
+    return JsonResponse(data)
 
 
 def csrf_failure(request, reason=""):

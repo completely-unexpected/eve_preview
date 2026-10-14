@@ -217,3 +217,111 @@ class MemberApprovalTests(TestCase):
         user = self.User(username="new_staff", is_staff=True, account_status=self.User.Status.PENDING)
         with self.assertRaises(ValidationError):
             user.full_clean()
+
+
+class PasswordChangeTests(TestCase):
+    def setUp(self):
+        self.client = Client(enforce_csrf_checks=True)
+        self.password = "River!Orbit-2026-test"
+        self.member = get_user_model().objects.create_user(username="password_member", password=self.password)
+        self.client.force_login(self.member)
+        self.new_password = "Fresh!Mountain-2026-test"
+
+    def post(self, action, data=None):
+        token = self.client.get("/api/accounts/session/").json()["csrfToken"]
+        return self.client.post("/api/accounts/" + action + "/", data or {}, HTTP_X_CSRFTOKEN=token)
+
+    def change(self, **changes):
+        data = {"old_password": self.password, "new_password1": self.new_password, "new_password2": self.new_password}
+        data.update(changes)
+        return self.post("password-change", data)
+
+    def test_password_change_preserves_current_and_revokes_other_session(self):
+        other = Client()
+        other.force_login(self.member)
+        response = self.change()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["authenticated"])
+        self.member.refresh_from_db()
+        self.assertTrue(self.member.check_password(self.new_password))
+        self.assertFalse(self.member.check_password(self.password))
+        self.assertTrue(self.client.get("/api/accounts/session/").json()["authenticated"])
+        self.assertFalse(other.get("/api/accounts/session/").json()["authenticated"])
+        self.post("logout")
+        self.assertEqual(self.post("login", {"username": self.member.username, "password": self.password}).status_code, 400)
+        self.assertEqual(self.post("login", {"username": self.member.username, "password": self.new_password}).status_code, 200)
+
+    def test_invalid_changes_do_not_change_password(self):
+        for changes, field in [({"old_password": "wrong"}, "old_password"), ({"new_password2": "different"}, "new_password2"), ({"new_password1": "123", "new_password2": "123"}, "new_password2")]:
+            response = self.change(**changes)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn(field, response.json()["errors"])
+            self.member.refresh_from_db()
+            self.assertTrue(self.member.check_password(self.password))
+
+    def test_anonymous_and_suspended_cannot_change_password(self):
+        anonymous = Client()
+        self.assertEqual(anonymous.post("/api/accounts/password-change/", {}).status_code, 401)
+        self.member.account_status = get_user_model().Status.SUSPENDED
+        self.member.save()
+        self.assertEqual(self.change().status_code, 401)
+
+    def test_change_requires_post_and_csrf(self):
+        self.assertEqual(self.client.get("/api/accounts/password-change/").status_code, 405)
+        self.assertEqual(self.client.post("/api/accounts/password-change/", {}).status_code, 403)
+
+    def test_change_after_suspension_and_restore_keeps_session(self):
+        self.member.account_status = get_user_model().Status.SUSPENDED
+        self.member.save()
+        self.member.account_status = get_user_model().Status.APPROVED
+        self.member.save()
+        self.client.force_login(self.member)
+        self.assertEqual(self.change().status_code, 200)
+        self.assertTrue(self.client.get("/api/accounts/session/").json()["authenticated"])
+
+
+class ProfileTests(TestCase):
+    def setUp(self):
+        self.member = get_user_model().objects.create_user(username="profile_member", nickname="처음", password="Orbit!2026-Profile")
+        self.client = Client(enforce_csrf_checks=True)
+        self.client.force_login(self.member)
+
+    def update(self, data):
+        token = self.client.get("/api/accounts/session/").json()["csrfToken"]
+        return self.client.post("/api/accounts/profile/", data, HTTP_X_CSRFTOKEN=token)
+
+    def test_nickname_persists_without_changing_other_fields(self):
+        other = get_user_model().objects.create_user(username="other", nickname="다른 회원")
+        password_hash = self.member.password
+        response = self.update({"nickname": " 새 닉네임 ", "username": "hacked", "is_staff": "true", "account_status": "suspended", "id": other.pk})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["user"]["nickname"], "새 닉네임")
+        self.assertEqual(self.client.get("/api/accounts/session/").json()["user"]["nickname"], "새 닉네임")
+        self.member.refresh_from_db()
+        other.refresh_from_db()
+        self.assertEqual(self.member.username, "profile_member")
+        self.assertFalse(self.member.is_staff)
+        self.assertTrue(self.member.is_active)
+        self.assertEqual(self.member.password, password_hash)
+        self.assertEqual(other.nickname, "다른 회원")
+
+    def test_invalid_nickname_keeps_original(self):
+        for data in ({}, {"nickname": "   "}, {"nickname": "가" * 31}):
+            response = self.update(data)
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("nickname", response.json()["errors"])
+        self.member.refresh_from_db()
+        self.assertEqual(self.member.nickname, "처음")
+        self.assertEqual(self.update({"nickname": "가" * 30}).status_code, 200)
+
+    def test_anonymous_and_suspended_rejected(self):
+        self.assertEqual(Client().post("/api/accounts/profile/", {"nickname": "변경"}).status_code, 401)
+        self.member.account_status = get_user_model().Status.SUSPENDED
+        self.member.save()
+        self.assertEqual(self.update({"nickname": "변경"}).status_code, 401)
+
+    def test_post_csrf_and_origin_required(self):
+        self.assertEqual(self.client.get("/api/accounts/profile/").status_code, 405)
+        self.assertEqual(self.client.post("/api/accounts/profile/", {"nickname": "변경"}).status_code, 403)
+        token = self.client.get("/api/accounts/session/").json()["csrfToken"]
+        self.assertEqual(self.client.post("/api/accounts/profile/", {"nickname": "변경"}, HTTP_X_CSRFTOKEN=token, HTTP_ORIGIN="https://external.example").status_code, 403)

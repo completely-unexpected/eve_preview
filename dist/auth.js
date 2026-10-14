@@ -1,7 +1,7 @@
 // Session cookies stay in the browser; credentials are never stored in browser storage.
 const accountControls = document.querySelector('.header-sub > div');
-const authForms = [...document.querySelectorAll('#login form, #signup form')];
-const fieldNames = {username: '아이디', nickname: '닉네임', password: '비밀번호', password1: '비밀번호', password2: '비밀번호 확인'};
+const authForms = [...document.querySelectorAll('#login form, #signup form, #password-change form, #profile form')];
+const fieldNames = {old_password: '현재 비밀번호', new_password1: '새 비밀번호', new_password2: '새 비밀번호 확인', username: '아이디', nickname: '닉네임', password: '비밀번호', password1: '비밀번호', password2: '비밀번호 확인'};
 const notice = document.createElement('div');
 notice.className = 'auth-notice';
 notice.setAttribute('role', 'status');
@@ -26,7 +26,7 @@ authForms.forEach(form => {
   feedback.setAttribute('role', 'alert');
   feedback.hidden = true;
   form.prepend(feedback);
-  form.closest('dialog').addEventListener('close', () => showAuthErrors(form, []));
+  form.closest('dialog').addEventListener('close', () => {showAuthErrors(form, []); form.reset();});
 });
 async function readAuthResponse(response) {
   if (!response.headers.get('content-type')?.includes('application/json')) {
@@ -62,7 +62,27 @@ function renderAccount(data) {
       } catch (error) {notifyAuth(error.message || '연결 오류입니다. 다시 시도해 주세요.');}
       finally {logoutButton.disabled = false;}
     });
-    accountControls.append(name, logoutButton);
+    const passwordButton = document.createElement('button');
+    passwordButton.className = 'text-button';
+    passwordButton.id = 'password-change-button';
+    passwordButton.textContent = '비밀번호 변경';
+    passwordButton.addEventListener('click', () => openDialog('password-change'));
+    const profileButton = document.createElement('button');
+    profileButton.className = 'text-button';
+    profileButton.id = 'profile-button';
+    profileButton.textContent = '회원정보 수정';
+    profileButton.addEventListener('click', async () => {
+      profileButton.disabled = true;
+      try {
+        const current = await getSession();
+        renderAccount(current);
+        if (!current.authenticated) {notifyAuth('로그인 후 회원정보를 수정해 주세요.'); return;}
+        openDialog('profile');
+        document.querySelector('#profile [name="nickname"]').value = current.user.nickname;
+      } catch (error) {notifyAuth(error.message);}
+      finally {profileButton.disabled = false;}
+    });
+    accountControls.append(name, profileButton, passwordButton, logoutButton);
   } else {
     for (const [id, label] of [['login', 'Login'], ['signup', 'Sign up']]) {
       const button = document.createElement('button');
@@ -88,7 +108,7 @@ authForms.forEach(form => form.addEventListener('submit', async event => {
   submit.textContent = '처리 중…';
   try {
     const current = await getSession();
-    const action = form.closest('dialog').id === 'signup' ? 'signup' : 'login';
+    const action = form.closest('dialog').id;
     const response = await fetch('/api/accounts/' + action + '/', {
       method: 'POST', credentials: 'same-origin', mode: 'same-origin',
       headers: {'X-CSRFToken': current.csrfToken}, body: new URLSearchParams(new FormData(form))
