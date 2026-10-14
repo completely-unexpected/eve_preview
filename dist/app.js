@@ -28,7 +28,7 @@ const routeView = document.createElement('section');
 routeView.className = 'route-view content';
 routeView.hidden = true;
 main.append(routeView);
-const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events' };
+const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices' };
 document.querySelectorAll('nav a').forEach(link => link.href = '#/' + menuRoutes[link.dataset.section]);
 document.querySelectorAll('a.logo').forEach(link => link.href = '#/home');
 document.querySelector('.hero-button').href = '#/games';
@@ -214,6 +214,46 @@ function renderSports(mode) {
   filter();
   renderSelection();
 }
+async function renderNotices(id) {
+  const currentHash = location.hash;
+  routeView.innerHTML = pageHeading('공지사항', '사이트 소식과 이용 안내를 확인하세요.') + '<div id="notice-content" class="detail-panel" aria-live="polite">불러오는 중…</div>';
+  const panel = routeView.querySelector('#notice-content');
+  const listing = id === undefined;
+  if (!listing && !/^[1-9][0-9]*$/.test(id)) {panel.textContent = '공지사항을 찾을 수 없습니다.'; return;}
+  const page = new URLSearchParams(location.search).get('noticePage') || '1';
+  try {
+    const response = await fetch('/api/notices/' + (listing ? '?page=' + encodeURIComponent(page) : id + '/'), {cache:'no-store', mode:'same-origin'});
+    if (location.hash !== currentHash || !panel.isConnected) return;
+    if (response.status === 404) {panel.textContent = '공지사항을 찾을 수 없습니다.'; return;}
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error();
+    const result = await response.json();
+    if (location.hash !== currentHash || !panel.isConnected) return;
+    panel.replaceChildren();
+    const date = value => new Intl.DateTimeFormat('ko-KR', {timeZone:'Asia/Seoul',dateStyle:'medium'}).format(new Date(value));
+    if (listing) {
+      if (!result.items.length) {panel.textContent = '등록된 공지사항이 없습니다.'; return;}
+      for (const notice of result.items) {
+        const link = document.createElement('a');link.className = 'notice-row';link.href = '#/notices/' + notice.id;
+        const title = document.createElement('strong');title.textContent = (notice.pinned ? '[고정] ' : '') + notice.title;
+        const time = document.createElement('time');time.dateTime = notice.createdAt;time.textContent = date(notice.createdAt);
+        link.append(title,time);panel.append(link);
+      }
+      const pagination = document.createElement('div');pagination.className = 'detail-actions';
+      for (const [number,label] of [[result.page-1,'이전'],[result.page+1,'다음']]) {
+        if (number < 1 || number > result.pages) continue;
+        const link = document.createElement('a');link.className = 'secondary-button';link.textContent = label;link.href = '?noticePage=' + number + '#/notices';pagination.append(link);
+      }
+      panel.append(pagination);
+    } else {
+      const notice = result.notice;
+      const title = document.createElement('h2');title.textContent = notice.title;
+      const time = document.createElement('p');time.className = 'muted';time.textContent = '작성일 ' + date(notice.createdAt);
+      const body = document.createElement('div');body.className = 'notice-body';body.textContent = notice.body;
+      const back = document.createElement('a');back.className = 'secondary-button';back.href = '#/notices';back.textContent = '목록으로';
+      panel.append(title,time,body,back);
+    }
+  } catch {if (panel.isConnected) panel.textContent = '공지사항을 불러오지 못했습니다. 새로고침하여 다시 시도해 주세요.';}
+}
 function renderNotFound() {
   routeView.innerHTML = pageHeading('페이지를 찾을 수 없습니다', '메뉴에서 원하는 화면을 다시 선택해 주세요.') + '<a class="primary-button" href="#/home">홈으로 돌아가기</a>';
 }
@@ -234,6 +274,7 @@ function route() {
     if (parts.length > 2) renderNotFound();
     else if (page === 'games') detail === undefined ? renderGames() : renderGame(detail);
     else if (page === 'events') renderEvents(detail);
+    else if (page === 'notices') renderNotices(detail);
     else if (page === 'casino' && detail === undefined) renderCasino();
     else if (['sports', 'inplay', 'esports'].includes(page) && detail === undefined) renderSports(page);
     else renderNotFound();

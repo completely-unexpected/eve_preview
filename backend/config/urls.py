@@ -13,6 +13,7 @@ def frontend_asset(request, path, document_root):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/notices/", include("notices.urls")),
     path("api/accounts/", include("accounts.urls")),
     path("", TemplateView.as_view(template_name="index.html"), name="home"),
 ]
