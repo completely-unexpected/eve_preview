@@ -18,12 +18,13 @@ urlpatterns = [
     path("api/inquiries/", include("inquiries.urls")),
     path("api/games/", include("catalog.urls")),
     path("api/events/", include("events.urls")),
+    path("api/board/", include("board.urls")),
     path("api/notices/", include("notices.urls")),
     path("api/accounts/", include("accounts.urls")),
     path("", TemplateView.as_view(template_name="index.html"), name="home"),
 ]
 
 # Local development only. A production deployment must serve static assets separately.
-for asset in ("styles.css", "functionality.css", "auth.css", "app.js", "auth.js", "inquiries.js"):
+for asset in ("styles.css", "functionality.css", "auth.css", "app.js", "auth.js", "inquiries.js", "board.js"):
     urlpatterns.append(path(asset, frontend_asset, {"path": asset, "document_root": settings.FRONTEND_DIR}))
 urlpatterns.append(path("assets/<path:path>", frontend_asset, {"document_root": settings.FRONTEND_DIR / "assets"}))

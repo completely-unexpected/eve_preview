@@ -52,3 +52,5 @@
 nav{align-items:center}nav a{display:inline-flex;align-items:center;line-height:1.4;white-space:nowrap}
 
 #inquiry-form label{display:block;margin:18px 0}#inquiry-form input,#inquiry-form textarea{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:4px;background:#293744;color:var(--text);font:inherit}#inquiry-form textarea{resize:vertical}#inquiry-content h2{overflow-wrap:anywhere}
+
+#board-form label{display:block;margin:18px 0}#board-form input,#board-form textarea{display:block;width:100%;margin-top:8px;padding:12px;border:1px solid var(--line);border-radius:4px;background:#293744;color:var(--text);font:inherit}#board-form textarea{resize:vertical}.board-pinned{color:var(--gold);font-weight:bold}#board-content h2{overflow-wrap:anywhere}

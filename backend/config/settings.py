@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+    'board.apps.BoardConfig',
     'events.apps.EventsConfig',
     'catalog.apps.CatalogConfig',
     'inquiries.apps.InquiriesConfig',
