@@ -1,0 +1,8 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>홈페이지와 관리자에 등록된 <strong>예정·진행 스포츠 경기 {{ total }}개</strong>를 비웁니다. 현재 검색·출처 필터와 관계없이 아래 각 수집본에 적용됩니다.</p>
+<ul>{% for row in rows %}<li>{{ row.label }}: {{ row.count }}개</li>{% endfor %}</ul>
+<p>회원 계정, 잔액, 배팅 내역, 완료 경기결과는 유지됩니다. 파워볼 회차와 영상 게임은 이 삭제 대상이 아닙니다.</p>
+<p>삭제 후 자동 웹 수집을 중지하고 진행 중인 웹 수집 작업도 중단합니다. 필요할 때 수집기에서 재개하거나 새로 수집할 수 있습니다.</p>
+<form method="post">{% csrf_token %}<p><label><input type="checkbox" name="confirm" value="yes" required> 등록된 예정·진행 스포츠 경기 전체 삭제를 확인했습니다.</label></p><button type="submit" style="background:#81383e;color:white;padding:10px 16px;border:0;border-radius:4px">경기 전체 삭제 실행</button><a href="{% url 'admin:catalog_game_odds' %}" style="margin-left:16px">돌아가기</a></form>
+{% endblock %}

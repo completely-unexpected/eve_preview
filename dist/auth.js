@@ -1,7 +1,26 @@
 // Session cookies stay in the browser; credentials are never stored in browser storage.
 const accountControls = document.querySelector('.header-sub > div');
+let headerWalletVersion = 0;
+async function refreshHeaderWallet() {
+  const username = accountControls.dataset.username;
+  const balance = document.querySelector('#header-wallet');
+  const version = ++headerWalletVersion;
+  if (!username || !balance || document.hidden) return;
+  try {
+    const response = await fetch('/api/wallet/', {cache:'no-store', credentials:'same-origin'});
+    if (!response.ok) return;
+    const data = await response.json();
+    if (version !== headerWalletVersion || accountControls.dataset.username !== username || !balance.isConnected) return;
+    balance.querySelector('[data-money]').textContent = Number(data.available).toLocaleString('ko-KR') + '원';
+    balance.querySelector('[data-points]').textContent = Number(data.points).toLocaleString('ko-KR') + 'P';
+  } catch {}
+}
+window.addEventListener('wallet-changed', refreshHeaderWallet);
+window.addEventListener('hashchange', refreshHeaderWallet);
+document.addEventListener('visibilitychange', refreshHeaderWallet);
+setInterval(refreshHeaderWallet, 30000);
 const authForms = [...document.querySelectorAll('#login form, #signup form, #password-change form, #profile form')];
-const fieldNames = {old_password: '현재 비밀번호', new_password1: '새 비밀번호', new_password2: '새 비밀번호 확인', username: '아이디', nickname: '닉네임', password: '비밀번호', password1: '비밀번호', password2: '비밀번호 확인'};
+const fieldNames = {referral_code: '추천 코드', old_password: '현재 비밀번호', new_password1: '새 비밀번호', new_password2: '새 비밀번호 확인', username: '아이디', nickname: '닉네임', password: '비밀번호', password1: '비밀번호', password2: '비밀번호 확인'};
 const notice = document.createElement('div');
 notice.className = 'auth-notice';
 notice.setAttribute('role', 'status');
@@ -82,7 +101,14 @@ function renderAccount(data) {
     attendanceLink.className = 'text-button';
     attendanceLink.href = '#/attendance';
     attendanceLink.textContent = '출석체크';
-    accountControls.append(attendanceLink, pointLink, name, replies, logoutButton);
+    const bettingLink = document.createElement('a');bettingLink.id='betting-history-link';bettingLink.className='text-button';bettingLink.href='#/betting-history';bettingLink.textContent='배팅 내역';
+    const balances = document.createElement('span'); balances.id = 'header-wallet';
+    for (const [label, attribute] of [['보유금액', 'data-money'], ['보유포인트', 'data-points']]) {
+      const item = document.createElement('span');item.className='header-wallet-item';
+      item.append(document.createTextNode(label+' '));const value=document.createElement('strong');value.setAttribute(attribute,'');value.textContent='—';item.append(value);balances.append(item);
+    }
+    accountControls.append(attendanceLink, bettingLink, pointLink, balances, name, replies, logoutButton);
+    refreshHeaderWallet();
     updateReplyNotification(data);
   } else {
     for (const [id, label] of [['login', 'Login'], ['signup', 'Sign up']]) {

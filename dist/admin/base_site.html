@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ title }} | 관리자{% endblock %}
+{% block branding %}<div id="site-name"><a href="{% url 'admin:index' %}">관리자</a></div>{% endblock %}
+{% block userlinks %}{{ block.super }}{% if admin_totals %}
+<div id="admin-money-summary" style="display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px 22px;margin-top:12px;font-size:12px;text-transform:none">
+{% if admin_totals.pending_deposit %}<a href="{% url 'admin:wallet_moneyrequest_changelist' %}?kind__exact=deposit&amp;status__exact=pending">입금신청 <strong data-total="pending_deposit">{{ admin_totals.pending_deposit.display }}</strong></a>{% endif %}
+{% if admin_totals.pending_withdraw %}<a href="{% url 'admin:wallet_moneyrequest_changelist' %}?kind__exact=withdraw&amp;status__exact=pending">출금신청 <strong data-total="pending_withdraw">{{ admin_totals.pending_withdraw.display }}</strong></a>{% endif %}
+{% if admin_totals.balance %}<a href="{% url 'admin:wallet_wallet_changelist' %}?holders=yes">보유금액 <strong data-total="balance">{{ admin_totals.balance.display }}</strong></a>{% endif %}
+{% if admin_totals.deposit %}<span>당일입금 <strong data-total="deposit">{{ admin_totals.deposit.display }}</strong></span>{% endif %}
+{% if admin_totals.withdraw %}<span>당일출금 <strong data-total="withdraw">{{ admin_totals.withdraw.display }}</strong></span>{% endif %}
+</div><script>setInterval(async()=>{if(document.hidden)return;try{const response=await fetch('{% url "admin_summary" %}',{cache:'no-store'});if(!response.ok)return;const data=await response.json();for(const [key,value] of Object.entries(data.totals))document.querySelector('[data-total="'+key+'"]')?.replaceChildren(document.createTextNode(value.display));}catch{}},30000);</script>
+{% endif %}{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<style>
+#header{flex-wrap:wrap;gap:18px}#header #user-tools{margin-left:auto}
+.admin-top-menu{display:flex;flex-wrap:wrap;align-items:center;gap:12px 22px;width:100%;padding-top:15px;border-top:1px solid #ffffff30;font-size:13px;font-weight:600}
+.admin-top-menu details{position:relative}.admin-top-menu summary{cursor:pointer;font:inherit;list-style:none;padding:8px 0}.admin-top-menu summary::after{content:' ▾'}
+.admin-top-menu summary:focus-visible{outline:2px solid currentColor;outline-offset:3px}
+.admin-top-submenu{position:absolute;top:100%;left:0;z-index:100;min-width:210px;max-height:65vh;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--body-bg);border:1px solid var(--hairline-color);box-shadow:0 6px 20px #0004}
+#header .admin-top-submenu a{display:block;color:var(--link-fg);padding:10px 12px;white-space:nowrap;font-size:13px}
+#header .admin-top-submenu a:hover{background:var(--darkened-bg)}
+.admin-engine-group{border-bottom:1px solid var(--hairline-color);padding:3px 0}
+.admin-engine-group summary{color:var(--body-fg);padding:8px 10px}
+.admin-engine-links{display:flex;flex-direction:column;gap:6px;padding:4px 0 9px 14px}
+@media(max-width:767px){#header{align-items:flex-start}.admin-top-menu{gap:8px 18px}.admin-top-submenu{position:fixed;top:auto;left:16px;right:16px;min-width:0}}
+</style>{% endblock %}
+{% block nav-global %}{% if user.is_active and user.is_staff %}
+<nav class="admin-top-menu" aria-label="관리자 메뉴">
+<a href="{% url 'admin:index' %}">관리자 홈</a><a href="{% url 'admin_overview' %}">현황</a>
+{% if can_view_betting_status %}<a href="{% url 'admin_betting_status' %}">배팅현황</a>{% endif %}
+{% for app in available_apps %}<details><summary>{{ app.name }}</summary><div class="admin-top-submenu">
+{% if app.menu_groups %}{% for group in app.menu_groups %}<details class="admin-engine-group"><summary>{{ group.name }}</summary><div class="admin-engine-links">{% for model in group.models %}{% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model.name }}</a>{% endif %}{% endfor %}</div></details>{% endfor %}{% else %}{% for model in app.models %}{% if model.admin_url %}<a href="{{ model.admin_url }}">{{ model.name }}</a>{% endif %}{% endfor %}{% endif %}
+</div></details>{% endfor %}
+</nav>
+<script>
+document.querySelectorAll('.admin-top-menu > details').forEach(menu=>{
+menu.addEventListener('toggle',()=>{if(menu.open)document.querySelectorAll('.admin-top-menu > details').forEach(other=>{if(other!==menu)other.open=false;});});
+});
+document.addEventListener('click',event=>{document.querySelectorAll('.admin-top-menu > details[open]').forEach(menu=>{if(!menu.contains(event.target))menu.open=false;});});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')document.querySelectorAll('.admin-top-menu > details[open]').forEach(menu=>{menu.open=false;menu.querySelector('summary').focus();});});
+</script>{% endif %}{% endblock %}

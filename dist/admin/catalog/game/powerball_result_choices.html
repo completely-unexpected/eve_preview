@@ -1,0 +1,1 @@
+<div class="pb-result-choices">{% for choice in options %}<span class="pb-result-choice{% if choice.winner %} winner{% endif %}" {% if choice.winner %}aria-label="{{ choice.name }} 결과 적중"{% endif %}><span>{{ choice.name }}</span><strong>{{ choice.price }}</strong></span>{% endfor %}</div>

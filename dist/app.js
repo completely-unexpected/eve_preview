@@ -1,4 +1,4 @@
-// Local game catalog and account APIs; external game providers are not connected.
+// Local catalog and account APIs, with the official NTRY Powerball broadcast embed.
 function escapeGameText(value) {
   return String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 }
@@ -29,6 +29,19 @@ routeView.hidden = true;
 main.append(routeView);
 const menuRoutes = { SPORTS: 'sports', INPLAY: 'inplay', ESPORTS: 'esports', CASINO: 'casino', GAMES: 'games', EVENTS: 'events', NOTICES: 'notices', INQUIRIES: 'inquiries', BOARD: 'board', WALLET: 'wallet', ATTENDANCE: 'attendance' };
 document.querySelectorAll('nav a').forEach(link => link.href = '#/' + menuRoutes[link.dataset.section]);
+const customerMenu = document.querySelector('.customer-menu');
+customerMenu.addEventListener('click', event => {
+  if (event.target.closest('a')) customerMenu.open = false;
+});
+document.addEventListener('click', event => {
+  if (!customerMenu.contains(event.target)) customerMenu.open = false;
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && customerMenu.open) {
+    customerMenu.open = false;
+    customerMenu.querySelector('summary').focus();
+  }
+});
 document.querySelectorAll('a.logo').forEach(link => link.href = '#/home');
 document.querySelector('.hero-button').href = '#/games';
 function mapLinks(selector, routes) {
@@ -86,6 +99,10 @@ async function loadPromotions() {
 }
 loadPromotions();
 function openDialog(id) {
+  if (id === 'signup') {
+    const code = new URLSearchParams(location.search).get('ref');
+    if (code) document.querySelector('#signup [name="referral_code"]').value = code.slice(0,32);
+  }
   document.querySelectorAll('dialog[open]').forEach(dialog => dialog.close());
   document.querySelector('#' + id).showModal();
 }
@@ -128,6 +145,42 @@ async function renderGames() {
   document.querySelector('#game-type').addEventListener('change', filter);
   filter();
 }
+let ntryFrameObserver = null;
+function renderNtryPowerball(panel, game) {
+  const source = 'https://ntry.com/scores/powerball/live.php';
+  panel.classList.add('ntry-game-detail');
+  panel.innerHTML = '<h2>엔트리 파워볼</h2><p>엔트리 공식 실시간 중계 · 5분 회차</p><div class="ntry-broadcast-wrap"><iframe id="ntry-powerball-frame" title="엔트리 파워볼 공식 실시간 중계" width="830" height="641" scrolling="no" referrerpolicy="strict-origin-when-cross-origin" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" allow="autoplay; fullscreen" allowfullscreen></iframe></div><p class="ntry-broadcast-note">공식 중계 화면입니다. 하단에서 회차를 선택해 카트에 담을 수 있습니다. 공식 결과 확인 후 접수 내역이 자동 정산됩니다.</p><div class="detail-actions"><button type="button" class="secondary-button" id="ntry-reload">중계 새로고침</button><a class="secondary-button" id="ntry-source" target="_blank" rel="noopener noreferrer">공식 중계 새 창으로 열기</a><a class="secondary-button" href="#/games">다른 게임 보기</a></div>';
+  const frame = panel.querySelector('iframe');
+  panel.querySelector('#ntry-source').href = source;
+  panel.querySelector('#ntry-reload').onclick = () => {frame.src = source;};
+  const wrap = panel.querySelector('.ntry-broadcast-wrap');
+  ntryFrameObserver = new ResizeObserver(entries => {
+    const scale = Math.min(1, entries[0].contentRect.width / 830);
+    frame.style.transform = 'scale(' + scale + ')';
+    wrap.style.height = (641 * scale) + 'px';
+  });
+  ntryFrameObserver.observe(wrap);
+  routeView.querySelector('.route-heading h1').textContent = '엔트리 파워볼';
+  routeView.querySelector('.route-heading p').textContent = 'NTRY POWERBALL · 공식 중계';
+  document.title = '엔트리 파워볼 — EVE';
+  mountPowerball(panel);
+  frame.src = source;
+}
+const mgmBroadcasts = {
+  'mgm-baccarat': {name:'MGM 바카라', source:'https://ozweb.minigame.media/bar/ozmgmbc?table=01'},
+  'mgm-gostop': {name:'MGM 고스톱', source:'https://ozweb.minigame.media/bar/ozmgmgs'}
+};
+function renderMgmBroadcast(panel, game) {
+  const broadcast = mgmBroadcasts[game.slug];
+  panel.innerHTML = `<h2>${broadcast.name}</h2><p>OZ Live 실시간 중계</p><div class="mgm-broadcast-wrap"><iframe id="mgm-broadcast-frame" title="${broadcast.name} 실시간 중계" scrolling="no" allow="autoplay; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><div class="detail-actions"><button type="button" class="secondary-button" id="mgm-reload">영상 새로고침</button><a class="secondary-button" id="mgm-source" target="_blank" rel="noopener noreferrer">영상 새 창으로 열기</a><a class="secondary-button" href="#/games">다른 게임 보기</a></div>`;
+  const frame = panel.querySelector('iframe');
+  frame.src = broadcast.source;
+  panel.querySelector('#mgm-source').href = broadcast.source;
+  panel.querySelector('#mgm-reload').onclick = () => {frame.src = broadcast.source;};
+  routeView.querySelector('.route-heading h1').textContent = broadcast.name;
+  routeView.querySelector('.route-heading p').textContent = 'OZ LIVE · 실시간 중계';
+  document.title = broadcast.name + ' · EVE';
+}
 async function renderGame(id) {
   routeView.innerHTML = pageHeading('게임 상세', '게임 정보를 확인하세요.', 'games', '게임 목록으로') + '<div id="game-detail-panel" class="detail-panel game-detail">불러오는 중…</div>';
   const panel = routeView.querySelector('#game-detail-panel');
@@ -136,6 +189,8 @@ async function renderGame(id) {
     if (!panel.isConnected) return;
     if (!result) {panel.textContent = '게임을 찾을 수 없습니다.'; return;}
     const game = result.game;
+    if (game.slug === 'powerball') {renderNtryPowerball(panel, game); return;}
+    if (mgmBroadcasts[game.slug]) {renderMgmBroadcast(panel, game); return;}
     const name = escapeGameText(game.name);
     panel.innerHTML = `<div class="detail-symbol" aria-hidden="true">${escapeGameText(game.symbol)}</div><h2>${name}</h2><p class="notice-body">${escapeGameText(game.description || '등록된 게임 안내가 없습니다.')}</p><div class="sample-notice">게임 API가 아직 연결되지 않았습니다. 실제 게임 실행은 제공하지 않습니다.</div><button class="primary-button" id="game-information">게임 이용 안내</button><a class="secondary-button" href="#/games">다른 게임 보기</a>`;
     const heading = routeView.querySelector('.route-heading h1'); heading.textContent = game.name;
@@ -229,6 +284,11 @@ function renderNotFound() {
   routeView.innerHTML = pageHeading('페이지를 찾을 수 없습니다', '메뉴에서 원하는 화면을 다시 선택해 주세요.') + '<a class="primary-button" href="#/home">홈으로 돌아가기</a>';
 }
 function route() {
+  if(stopOddsPortal){stopOddsPortal();stopOddsPortal=null;}
+  if (stopPowerball) {stopPowerball(); stopPowerball = null;}
+  if (ntryFrameObserver) {ntryFrameObserver.disconnect(); ntryFrameObserver = null;}
+  document.querySelector('#ntry-powerball-frame')?.remove();
+  document.querySelector('#mgm-broadcast-frame')?.remove();
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   const page = parts[0] || 'home';
   const detail = parts[1];
@@ -241,12 +301,16 @@ function route() {
     if (active) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   });
+  customerMenu.classList.toggle('active', ['notices', 'inquiries', 'board'].includes(page));
   if (page !== 'home') {
     if (parts.length > 2) renderNotFound();
     else if (page === 'games') detail === undefined ? renderGames() : renderGame(detail);
     else if (page === 'events') renderEvents(detail);
     else if (page === 'inquiries') renderInquiries(detail);
     else if (page === 'account' && detail === undefined) renderAccountPage();
+    else if (page === 'betting-history' && detail === undefined) renderBettingHistory();
+    else if (page === 'partner' && detail === undefined) renderPartnerPage();
+    else if (page === 'oddsportal' && detail === undefined) renderOddsPortal();
     else if (page === 'board') renderBoard(detail);
     else if (page === 'wallet') renderWallet(detail);
     else if (page === 'attendance') renderAttendance(detail);

@@ -1,0 +1,2 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}<li><a href="{% url 'admin:catalog_game_odds' %}">경기·배당 전체 조회</a></li>{% if request.user.is_superuser %}<li><a href="{% url 'admin:catalog_game_reset_matches' %}" class="deletelink">등록 스포츠 경기 전체 삭제</a></li>{% endif %}{{ block.super }}{% endblock %}

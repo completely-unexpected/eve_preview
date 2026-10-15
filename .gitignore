@@ -8,3 +8,8 @@ db.sqlite3
 db.sqlite3-*
 .local-secret
 .local-odds-api-key
+node_modules/
+.local-oddsportal-runtime/
+.local-harvester-runtime/
+tools/harvester/packages/
+tools/harvester/probe-*.json

@@ -1,0 +1,36 @@
+{% extends "admin/change_list.html" %}
+{% block object-tools-items %}
+{{ block.super }}
+{% endblock %}
+{% block content %}
+<section class="module" style="padding:20px;margin-bottom:20px">
+<h2>OddsParsing 수집 실행</h2>
+<p>오늘 경기 전체 수집에서 범위를 선택해 실행합니다. 각 선택란의 전체는 해당 조건을 제한하지 않습니다. 리그 선택지는 이전에 수집한 리그입니다.</p>
+<p>수집 실행 시 중지 상태를 해제합니다. 실행한 뒤에도 아래 중지 버튼으로 멈출 수 있습니다.</p>
+{% if can_collect %}<form method="post" action="{{ collect_url }}">{% csrf_token %}{{ parsing_form.as_p }}<button id="collect-today" type="submit" {% if collection_job.active %}disabled{% endif %}>수집 실행</button></form>{% endif %}
+<p>결과 자동 수집: <strong>{% if results_paused %}중지됨{% else %}실행 허용{% endif %}</strong></p>
+{% if can_collect %}<form method="post" action="{{ toggle_results_url }}">{% csrf_token %}
+{% if results_paused %}<button name="action" value="resume" type="submit">결과 수집 재개</button>{% else %}<button name="action" value="pause" type="submit">결과 수집 중지</button>{% endif %}
+</form>{% endif %}
+<p>중지하면 현재 브라우저 수집도 멈춥니다. 저장된 경기와 결과는 유지됩니다. 재개하려면 수집 작업 프로세스가 실행 중이어야 합니다.</p>
+<h2>수집 진행 상황</h2>
+<p>한국 시간 기준 오늘 경기입니다. 공개 종목 메뉴에서 발견한 각 종목의 ‘오늘 경기’를 순서대로 읽습니다. 배당이 없는 경기와 종료·연기 경기도 포함합니다.</p>
+<p>버튼을 누른 뒤 창을 닫아도 서버가 실행 중이면 수집은 계속됩니다. 수집 중 Chrome 창이 열릴 수 있습니다.</p>
+{% if collection_job %}
+<p id="op-job-status" role="status">{{ collection_job.day }} · {{ collection_job.statusLabel }} · {{ collection_job.done }} / {{ collection_job.total }} 종목 · {{ collection_job.count }}경기 · {{ collection_job.currentSport }}</p>
+<p id="op-job-error" style="color:var(--error-fg)">{{ collection_job.error }}</p>
+<ul id="op-job-reports">{% for report in collection_job.reports %}<li>{{ report.sport }}: {{ report.count|default:0 }}경기 {% if report.complete %}완료{% else %}{{ report.error }}{% endif %}</li>{% endfor %}</ul>
+{% else %}<p>아직 전체 수집을 실행하지 않았습니다.</p>{% endif %}
+<p><a href="/#/oddsportal" target="_blank" rel="noopener">수집한 경기·배당·결과 보기</a> · <a href="{% url 'admin:sportsfeed_oddsportalcollectionjob_changelist' %}">이전 수집 작업 내역</a></p>
+</section>
+{{ block.super }}
+{% if collection_job.active %}<script>
+(()=>{let busy=false;const timer=setInterval(async()=>{if(busy||document.hidden)return;busy=true;try{
+const response=await fetch('{{ collection_status_url|escapejs }}',{cache:'no-store',headers:{Accept:'application/json'}});
+if(!response.ok||!response.headers.get('content-type')?.includes('application/json'))throw Error('진행 상태를 조회하지 못했습니다. 새로고침해 주세요.');
+const job=await response.json();document.querySelector('#op-job-status').textContent=job.day+' · '+job.statusLabel+' · '+job.done+' / '+job.total+' 종목 · '+job.count+'경기 · '+job.currentSport;
+document.querySelector('#op-job-error').textContent=job.error;const list=document.querySelector('#op-job-reports');list.replaceChildren();for(const r of job.reports){const li=document.createElement('li');li.textContent=r.sport+': '+(r.count||0)+'경기 · '+(r.complete?'완료':r.error);list.append(li);}
+if(!job.active){clearInterval(timer);const button=document.querySelector('#collect-today');if(button)button.disabled=false;}
+}catch(e){document.querySelector('#op-job-error').textContent=e.message;}finally{busy=false;}},3000);})();
+</script>{% endif %}
+{% endblock %}

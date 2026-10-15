@@ -123,3 +123,159 @@ The Odds API의 무료 sports/events 엔드포인트를 Django 서버에서 호�
 외부 조회 결과는 DB에 저장하며 일반 화면 새로고침은 저장본만 읽습니다. 전체 새 조회는 관리자 경기·배당 전체 조회의 작업 또는 `python backend/manage.py sync_sports --force`로 실행합니다. 크레딧이 차감됩니다. 완료된 데이터에 `--force` 없이 명령을 실행하면 재사용하며, 완료하지 못한 조회는 이어서 수행합니다. 완성된 저장본을 전체 갱신할 때 예상 최대 크레딧보다 잔여량이 작으면 기존 자료를 유지하고 갱신하지 않습니다. 실시간 자동 갱신 작업은 등록하지 않았습니다.
 
 관리자는 경기 상세의 **세부 시장 불러오기**로 해당 경기에서 현재 제공되는 추가 시장(전반전·추가 핸디캡·코너·선수 지표 등)을 조회할 수 있습니다. 발견된 시장과 남은 크레딧 범위(최대 100시장)만 요청하며 5분 이내 같은 요청은 재사용합니다. 저장된 세부 시장은 일반 회원도 조회할 수 있습니다. 제공처별 시장 수가 다르므로 제공처를 선택해 확인합니다. 기본 전체 조회에는 72개 리그·882경기가 저장되었고 EPL 한 경기의 추가 시장 38종도 조회했습니다. 최초 전체 조회 후 크레딧 212, 추가 시장 검증 후 173이 남았습니다.
+
+
+### 가상머니 테스트 접수
+스포츠 카트의 접수는 실제 결제·현금 가치·환전이 없는 시뮬레이션 전용입니다.
+기존 지갑의 가상 잔액을 차감하며 외부 결제 또는 은행 송금은 수행하지 않습니다.
+싱글은 경기별 금액, 멀티는 카트 전체 금액을 차감합니다. 서버가 저장 배당과 시작 시각,
+회원 한도 및 잔액을 검증하고 접수와 차감 원장을 하나의 트랜잭션으로 저장합니다.
+같은 회원·접수 UUID의 재전송은 한 번만 차감합니다. 카트 아래에서 본인 내역을 조회하며
+관리자는 읽기 전용 테스트 접수 내역을 확인할 수 있습니다. 결과 정산은 아직 지원하지 않습니다.
+
+
+### 관리자 가상머니 정산
+관리자 → 가상머니 테스트 접수 내역에서 선택 후 적중·미적중·취소 작업을 실행합니다.
+서로 다른 결과는 가상머니 테스트 경기 결과에서 경기별로 처리합니다.
+싱글은 각 경기 처리 즉시 원금 포함 적중 반환액 또는 취소 원금을 지급합니다.
+멀티는 모든 경기 처리 후 정산합니다. 미적중이 하나라도 있으면 0, 취소 경기는 1배로 제외,
+전부 취소면 원금을 복원합니다. 처리 관리자·시각과 원장이 남으며 이미 처리한 결과는
+변경할 수 없고 같은 처리를 반복해도 중복 지급하지 않습니다. 자동 결과 판정은 수행하지 않습니다.
+
+
+### 축구만 갱신
+`python backend/manage.py refresh_soccer`는 축구 승무패·핸디캡·오버언더를 갱신하고
+최근 시작한 경기의 결과를 잔여 크레딧 내에서 조회합니다. 다른 종목은 기존 저장본을 유지합니다.
+기본 배당 갱신에 필요한 크레딧을 먼저 확보하며, 예산 부족 시 결과 조회를 생략합니다.
+사전경기는 시작 시각이 지난 항목을 제외하고, 카트의 마감 선택도 새로고침 시 제거합니다.
+이 조회는 결과를 저장할 뿐 회원 테스트 접수를 자동으로 정산하지 않습니다.
+
+
+### 엔트리 파워볼 공식 중계
+`#/games/powerball`에 엔트리가 공개한 `https://ntry.com/scores/powerball/live.php` 중계를
+830×641 iframe으로 삽입합니다. 모바일은 화면 폭에 맞춰 축소하고 다른 메뉴로 이동하면
+iframe을 제거합니다. 중계 새로고침과 공식 중계 새 창 열기를 지원합니다.
+이는 외부 중계 표시이며 API 결과 수집·배팅 접수·자동 정산은 포함하지 않습니다.
+
+
+### 파워볼 선택·카트
+공식 중계 아래에 KST 기준 5분 간격의 3개 예정 회차와 일반볼 홀짝·구간, 파워볼 홀짝·언더오버를 표시합니다.
+배당은 참고 화면의 시뮬레이션 기본값이며 외부 배당 API에서 가져온 값이 아닙니다. 추첨 30초 전 마감입니다.
+카트의 금액 입력·쉼표 처리·빠른 금액·MAX는 스포츠와 같은 `cart.js`를 공유합니다.
+회차당 한 항목을 선택할 수 있고, 서로 다른 회차끼리 멀티 조합할 수 있습니다.
+접수는 기존 가상 잔액·원장·중복 방지·회원 한도 검증을 재사용하고 `source=powerball`로 내역을 구분합니다.
+사이트에 저장된 본인 내역은 하단에 표시되며 관리자의 배팅 내역/경기 결과에서 수동 정산합니다.
+NTRY 결과 데이터 자동 수집이나 회차 동기화 API는 아직 연결하지 않았습니다. 공식 중계의 지연·중단 시
+운영자가 접수를 중지하거나 취소 처리해야 합니다. 결과 미수신 상태에서 임의로 자동 정산하지 않습니다.
+
+
+### 엔트리 파워볼 결과 자동 정산
+공식 중계 코드가 사용하는 공개 결과 JSON을 `sync_powerball_results` 명령으로 조회합니다.
+`--watch`는 30초마다 확인하며 대기 접수가 없으면 외부 조회를 5분 간격으로 줄입니다.
+날짜·일일 회차·전체 회차·중복 없는 일반볼 5개(1~28)·파워볼(0~9)을 검증하고
+추첨 시각 이전 결과, 이미 저장한 결과와 충돌하는 값은 정산하지 않습니다.
+같은 날짜·회차의 대기 선택만 판정하며 기존 원장·중복 지급 방지 트랜잭션을 재사용합니다.
+멀티는 모든 회차가 처리될 때까지 기다립니다. 네트워크 오류나 결과 누락을 미적중으로 간주하지 않습니다.
+자동 처리 전용 계정 `ntry_result_worker`는 비밀번호 로그인이 불가능하고 정산 권한만 갖습니다.
+관리자 '파워볼 공식 결과'에서 수신 기록을, '파워볼 자동 정산 설정'에서 상태·오류와 켜기/끄기를 확인합니다.
+이미 수동으로 처리한 결과는 자동으로 덮어쓰지 않습니다. 정정 결과 충돌은 관리자 확인이 필요합니다.
+이 데이터는 공개 중계용 JSON이며 별도로 보장된 상용 API나 SLA가 아니므로 형식·접근 변경 시 오류로 중단합니다.
+
+
+### OddsPortal public-page collector
+Install `npm install --ignore-scripts` inside `tools/oddsportal` (requires local Chrome).
+Run `python backend/manage.py sync_oddsportal` or add `--watch --interval 300`.
+The collector reads rendered public DOM, without login, stealth plugins or bypasses.
+`ODDSPORTAL_PAGES` can contain a JSON array of up to 10 public OddsPortal URLs; the default is the homepage.
+View the stored collection at `/#/oddsportal` or in the OddsPortal web collection admin menu.
+Displayed odds have no verified bookmaker attribution and are not labelled bet365.
+Source display times and explicit finished/live states are retained; no kickoff timestamp or final score is guessed.
+This feed is not connected to existing slips or automatic settlement. Failures retain the previous snapshot and record an error.
+
+REA verification (2026-10-15): headed Chrome 155 loaded the public home-data request successfully. The collector uses visible Chrome with en-US/UTC and blocked service workers to match that observed configuration. `ODDSPORTAL_HEADLESS=1` remains optional; headless loading failed in the observed environment. Display times are UTC, with no inferred kickoff timestamps. Expansion is bounded to five SHOW MORE clicks per page. The watch process requires the computer to remain running; no startup service is installed.
+
+### Administrator: collect today's matches
+
+Open `/admin/sportsfeed/oddsportalsnapshot/` and press **오늘 경기 전체 수집**.
+The POST requires the snapshot change permission and CSRF. It creates a persisted job,
+then starts a separate Python worker; closing the browser or ending a chat does not stop it.
+The computer, local Chrome installation and database must remain available. No chat or REA session is required at run time.
+
+The worker discovers sport-specific “Today's matches” links from the public sidebar and
+visits each link in a Chrome context using Asia/Seoul. It expands SHOW MORE until exhausted,
+subject to a 3-minute/1,000-click safety limit per sport. Any remaining list, missing sport link,
+or network error is explicitly recorded as partial/failed, never reported as complete.
+Dates changing during a run also produce an error. Successful sports are saved even when
+other sports fail, while failed pages never erase existing records. Results and bookmakers
+are not inferred, and existing betting slips are not settled from this feed.
+
+The admin polls job progress every three seconds. Simultaneous manual jobs are prevented
+by a database uniqueness constraint. Jobs without progress for 15 minutes expire so they
+can be retried. Work history is available under **오늘 경기 수집 작업**. A full collection temporarily
+pauses the lightweight homepage watch collector, if that watch process is running.
+
+### Automatic removal from the active list
+
+`/api/sports/oddsportal/` defaults to `scope=active`, excluding explicit finished/cancelled
+records. `scope=results` returns finished records and `scope=all` returns retained history.
+Scores alone never imply completion. Finished records are retained for results and an
+older non-finished observation cannot put them back into the active list.
+
+The OddsPortal screen refreshes the saved data every 30 seconds, and stops polling on
+navigation or while hidden. The watch command defaults to a 60-second pause between
+collection passes and revisits source pages of saved active matches across sports.
+External loading time adds to this delay; this is polling, not a push feed. Full manual
+collection pauses the watch; no external request failure is treated as a match result.
+
+### Reused browser and server deployment
+
+Both collectors now connect to `tools/oddsportal/browser-host.cjs`, which keeps one Chrome
+context and tab alive and serializes collection operations. It starts Chrome minimized
+once and reuses it; individual requests no longer launch and close Chrome. If the browser
+is closed or crashes, the next request creates a replacement. The host's loopback-only
+endpoint accepts fixed collection operations, requires a random local token, and is not
+a public API. Runtime metadata under `backend/.local-oddsportal-runtime/` is git-ignored;
+never expose or publish it. `ODDSPORTAL_RUNTIME_DIR` can point to a private writable runtime
+directory shared by the web and collector OS account.
+
+On a deployed host, install Python dependencies, Node dependencies (`npm ci` in
+`tools/oddsportal`), Google Chrome and its OS libraries. Run Django using a production
+application server, and supervise the browser host and watch worker separately using the
+host's service manager. On Linux, headed Chrome requires a display; an Xvfb virtual
+display can provide it without a physical desktop (https://playwright.dev/docs/ci).
+For example, the browser service command can be:
+
+```
+xvfb-run -a node tools/oddsportal/browser-host.cjs --host
+```
+
+The watch service runs `python backend/manage.py sync_oddsportal --watch --interval 60`.
+Configure the same private runtime directory and database for the web and workers, and
+run only one browser service per runtime directory. Do not expose its loopback port via
+reverse proxies or firewalls. The target server's Chrome environment, outbound access
+and OddsPortal responses must be checked there; local success is not a deployment test.
+No production services, startup tasks or remote server deployment have been installed.
+
+### Results for previously imported sports events
+
+Run `python backend/manage.py sync_portal_results --watch --interval 300` alongside
+the existing watch worker. This reads OddsPortal's yesterday/today public pages for
+sports with unresolved started events; it does not call The Odds API or spend its credits.
+Each pass is followed by a five-minute wait. The existing result-collection pause control
+also pauses this worker. A service manager must restart the worker after a host reboot.
+
+Only explicit final scores with matching sport, configured league, Korean calendar date
+and both teams are applied. Reviewed team aliases are configured in `portal_bridge.py`.
+Ambiguous doubleheaders and missing results remain unresolved. Completed events retain
+their original IDs and odds, move out of active management into results, and cannot be
+reopened by an odds refresh. This worker updates match results, not wallet settlement.
+The admin odds page shows the confirmed and unresolved counts and a pending-results filter.
+
+### Additional OddsHarvester collector
+
+The independent `/admin/sportsfeed/harvestersnapshot/` page runs pinned
+OddsHarvester 0.20.0 in an isolated Python environment. See
+[`tools/harvester/README.md`](tools/harvester/README.md) for installation and scope.
+Existing collectors remain available and retain their own snapshots.
+Harvester results appear under `source=harvester` in game/odds administration;
+this integration does not automatically replace the public feed.

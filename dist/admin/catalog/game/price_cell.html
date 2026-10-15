@@ -1,0 +1,1 @@
+{% if item.can_edit and key %}<button type="button" class="edit-odd" data-key="{{ key }}" data-url="{{ item.edit_url }}" aria-label="{{ item.event.home }} 대 {{ item.event.away }} 배당 수정">{{ price }}</button>{% else %}{{ price }}{% endif %}

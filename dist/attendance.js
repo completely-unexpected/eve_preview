@@ -128,6 +128,7 @@ async function renderAttendance(id) {
           feedback.hidden = false;
           return;
         }
+        window.dispatchEvent(new Event('wallet-changed'));
         await renderAttendance();
         document.querySelector('#attendance-content')?.prepend(make('p', payload.message, 'wallet-success'));
       } catch {

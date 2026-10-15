@@ -1,4 +1,4 @@
-const sportsSlip = {picks: new Map(), mode: 'multi', stake: '', owner: null};
+const sportsSlip = {picks: new Map(), mode: 'multi', stake: '', owner: null, pending: null, submitting: false};
 let sportsBoardRequest = 0;
 let activeSportsFundsRefresh = null;
 
@@ -6,12 +6,12 @@ async function renderSports(mode) {
   const requestId = ++sportsBoardRequest;
   activeSportsFundsRefresh = null;
   const view = document.querySelector('.route-view');
-  view.innerHTML = pageHeading(mode === 'inplay' ? '인플레이' : mode === 'esports' ? 'E-스포츠' : '스포츠', '경기·배당 데이터 · The Odds API') + '<div id="sports-board" aria-live="polite">전체 경기·배당을 불러오는 중…</div>';
+  view.innerHTML = pageHeading(mode === 'inplay' ? '인플레이' : mode === 'esports' ? 'E-스포츠' : '스포츠', '') + '<div id="sports-board" aria-live="polite">전체 경기·배당을 불러오는 중…</div>';
   const panel = view.querySelector('#sports-board');
   const valid = () => requestId === sportsBoardRequest && panel.isConnected;
   const make = (tag, text = '', cls = '') => {const element = document.createElement(tag); element.textContent = text; if (cls) element.className = cls; return element;};
   const format = value => new Intl.NumberFormat('ko-KR').format(value);
-  const priceText = value => Number(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 4});
+  const priceText = value => Number(value).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const time = value => Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat('ko-KR', {timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false}).format(new Date(value)) : '시간 미제공';
   const groupsInfo = {Soccer: ['⚽', '축구'], Basketball: ['🏀', '농구'], Baseball: ['⚾', '야구'], 'Ice Hockey': ['🏒', '아이스하키'], Tennis: ['🎾', '테니스'], Handball: ['🤾', '핸드볼'], Boxing: ['🥊', '권투'], 'Mixed Martial Arts': ['🥋', 'MMA'], MMA: ['🥋', 'MMA'], 'Rugby League': ['🏉', '럭비'], 'American Football': ['🏈', '미식축구'], 'Aussie Rules': ['🏉', '호주식 축구'], Cricket: ['🏏', '크리켓']};
   const marketNames = {h2h: '승무패', spreads: '핸디캡', totals: '오버언더', alternate_spreads: '추가 핸디캡', alternate_totals: '추가 오버언더', btts: '양팀 득점', draw_no_bet: '무승부 제외', team_totals: '팀 오버언더'};
@@ -47,28 +47,39 @@ async function renderSports(mode) {
     if (!valid()) return;
     panel.replaceChildren();
     const meta = make('div', '', 'sb-meta');
-    meta.append(make('span', data.source + ' · 저장된 배당 조회 ' + time(data.fetchedAt)), make('span', data.items.length + '개 경기 · ' + data.completedLeagues.length + '개 리그'));
+    meta.append(make('span', data.items.length + '개 경기 · ' + data.completedLeagues.length + '개 리그'));
     panel.append(meta);
+    const currentEvents = new Map(data.items.map(event => [event.id, event]));
+    for (const [key, pick] of sportsSlip.picks) {
+      const event = currentEvents.get(pick.event.id);
+      const outcome = event?.bookmakers.find(book => book.key === pick.bookKey)?.markets.find(market => market.key === pick.market)?.outcomes.find(outcome => outcome.name === pick.outcome.name && outcome.point === pick.outcome.point && outcome.description === pick.outcome.description);
+      if (!event || !outcome || event.completed || Date.parse(event.startsAt) <= Date.now()) sportsSlip.picks.delete(key);
+      else {pick.event = event; pick.outcome = outcome;}
+    }
     if (!data.complete) panel.append(make('p', '일부 리그의 조회가 완료되지 않았습니다. 현재 저장된 경기만 표시합니다.', 'wallet-feedback'));
     const eligibleEvents = data.items.filter(event => !event.completed && (mode === 'esports' ? /esport/i.test(event.group + event.leagueKey) : !/esport/i.test(event.group + event.leagueKey)));
-    const phaseEvents = eligibleEvents.filter(event => mode === 'inplay' ? event.status === 'live' : event.status !== 'live');
+    const phaseEvents = eligibleEvents.filter(event => mode === 'inplay' ? event.status === 'live' : event.status !== 'live' && Date.parse(event.startsAt) > Date.now());
     const groups = [...new Set(data.leagues.filter(league => mode === 'esports' ? /esport/i.test(league.group + league.key) : !/esport/i.test(league.group + league.key)).map(league => league.group))];
+    const sportOrder = ['Soccer', 'Baseball', 'Basketball'];
+    groups.sort((a, b) => {const rank = value => sportOrder.includes(value) ? sportOrder.indexOf(value) : sportOrder.length; return rank(a) - rank(b);});
     let selectedGroup = groups.includes('Soccer') ? 'Soccer' : groups[0] || 'all';
     let selectedEvent = null;
     let selectedBook = '';
     let marketFilter = 'all';
     let page = 1;
     const layout = make('div', '', 'sb-layout');
-    const sidebar = make('aside', '', 'sb-sidebar');
     const center = make('section', '', 'sb-center');
     const detail = make('section', '', 'sb-detail'); detail.id = 'match-detail';
     const cart = make('aside', '', 'sb-slip'); cart.id = 'betting-cart'; cart.setAttribute('aria-label', '베팅 카트');
-    layout.append(sidebar, center, detail, cart); panel.append(layout);
-    const phases = make('div', '', 'sb-phase-tabs');
-    for (const [route, label] of [['sports', 'Prematch'], ['inplay', 'Inplay']]) {const link = make('a', label, route === mode ? 'active' : ''); link.href = '#/' + route; phases.append(link);}
-    sidebar.append(phases);
-    const groupList = make('div', '', 'sb-group-list'); sidebar.append(groupList);
-    const groupTabs = make('div', '', 'sb-group-tabs'); center.append(groupTabs);
+    layout.append(center, detail, cart); panel.append(layout);
+    const historyBox = make('section', '', 'sb-demo-history'); panel.append(historyBox);
+    let historyVersion = 0;
+    const phases = make('div', '', 'sb-phase-picker');
+    const phaseSelect = document.createElement('select');phaseSelect.setAttribute('aria-label','경기 유형 선택');
+    for (const [route, label] of [['sports', '프리매치'], ['inplay', '인플레이'], ...(mode==='esports'?[['esports','E스포츠']]:[])]) {const option=make('option',label);option.value=route;phaseSelect.append(option);}
+    phaseSelect.value=mode;phaseSelect.onchange=()=>{location.hash='#/'+phaseSelect.value;};
+    phases.append(phaseSelect);layout.before(phases);
+    const groupList = make('div', '', 'sb-group-list sb-top-groups');groupList.setAttribute('aria-label','종목 선택');phases.after(groupList);
     const tools = make('div', '', 'sb-tools');
     const search = document.createElement('input'); search.type = 'search'; search.placeholder = '팀 또는 리그 이름을 입력하세요'; search.id = 'match-search'; search.setAttribute('aria-label', '팀 또는 리그 검색');
     const league = document.createElement('select'); league.id = 'match-league'; league.setAttribute('aria-label', '리그 선택');
@@ -82,6 +93,7 @@ async function renderSports(mode) {
     const cartNotice = make('p', '', 'sb-slip-notice');
 
     function choose(event, book, market, outcome) {
+      if (Date.parse(event.startsAt) <= Date.now() || event.completed) {cartNotice.textContent = '마감된 경기입니다. 목록을 새로고침해 주세요.'; return;}
       const key = selectionKey(event, book, market, outcome);
       if (sportsSlip.picks.has(key)) sportsSlip.picks.delete(key);
       else {
@@ -94,7 +106,11 @@ async function renderSports(mode) {
     }
     function rateButton(event, book, market, outcome, short = false) {
       const button = make('button', '', 'sb-rate'); button.type = 'button'; button.dataset.pick = selectionKey(event, book, market, outcome);
-      button.append(make('span', outcomeLabel(outcome, short, event)), make('strong', priceText(outcome.price)));
+      if(outcome.name !== 'Draw') button.append(make('span', outcomeLabel(outcome, short, event)));
+      else {button.classList.add('sb-draw-rate');button.setAttribute('aria-label','무승부 배당 '+priceText(outcome.price));}
+      button.append(make('strong', priceText(outcome.price)));
+      if(outcome.name === event.away) button.classList.add('sb-away-rate');
+      if (Date.parse(event.startsAt) <= Date.now() || event.completed) {button.disabled = true; button.title = '마감된 경기입니다.';}
       if (market.key.endsWith('_lay')) {button.disabled = true; button.title = '레이 시장은 카트 선택을 지원하지 않습니다.';}
       button.setAttribute('aria-pressed', String(sportsSlip.picks.has(button.dataset.pick)));
       button.onclick = () => {selectedEvent = event; selectedBook = book.key; renderDetail(); choose(event, book, market, outcome);};
@@ -105,13 +121,12 @@ async function renderSports(mode) {
     }
     function setGroup(value) {selectedGroup = value; page = 1; buildGroups(); buildLeagues(); renderList();}
     function buildGroups() {
-      groupList.replaceChildren(); groupTabs.replaceChildren();
+      groupList.replaceChildren();
       for (const group of ['all', ...groups]) {
         const [icon, name] = group === 'all' ? ['▣', '전체'] : groupsInfo[group] || ['●', group];
         const number = phaseEvents.filter(event => group === 'all' || event.group === group).length;
         const button = make('button', '', 'sb-group ' + (selectedGroup === group ? 'active' : '')); button.type = 'button'; button.dataset.group = group;
         button.append(make('span', icon + ' ' + name), make('strong', String(number))); button.onclick = () => setGroup(group); groupList.append(button);
-        if (group !== 'all') {const tab = make('button', icon + ' ' + name, selectedGroup === group ? 'active' : ''); tab.type = 'button'; tab.onclick = () => setGroup(group); groupTabs.append(tab);}
       }
     }
     function buildLeagues() {
@@ -126,22 +141,37 @@ async function renderSports(mode) {
       const pages = Math.max(1, Math.ceil(events.length / 40)); page = Math.min(page, pages);
       count.textContent = events.length + '개 경기 · ' + page + '/' + pages + ' 페이지'; list.replaceChildren();
       let lastLeague = '';
+      const leagueGroups = new Map();
       for (const event of events.slice((page - 1) * 40, page * 40)) {
+        if (!leagueGroups.has(event.leagueKey)) leagueGroups.set(event.leagueKey, []);
+        leagueGroups.get(event.leagueKey).push(event);
+      }
+      for (const event of [...leagueGroups.values()].flat()) {
         if (lastLeague !== event.leagueKey) {list.append(make('h3', event.league, 'sb-league-heading')); lastLeague = event.leagueKey;}
-        const row = make('div', '', 'sb-match-row'); row.dataset.match = event.id;
+        const row = make('div', '', 'sb-match-row sb-compact-row'); row.dataset.match = event.id;
         const title = make('button', '', 'sb-match-title'); title.type = 'button';
-        title.append(make('small', time(event.startsAt) + (event.status === 'live' ? ' · 진행 중' : event.status === 'unconfirmed' ? ' · 진행 상태 미확인' : '')));
-        title.append(make('strong', event.home), make('strong', event.away));
+        title.append(make('small', time(event.startsAt)));
         title.onclick = () => {selectedEvent = event; selectedBook = ''; marketFilter = 'all'; renderDetail();}; row.append(title);
         const book = event.bookmakers[0];
-        const market = book?.markets.find(item => item.key === 'h2h');
-        if (book) row.append(make('span', book.title, 'sb-book-source'));
+        const market = book?.markets.find(item => item.key === 'h2h') || book?.markets.find(item => item.key === 'spreads');
         const prices = make('div', '', 'sb-main-rates');
+        const homeName = make('span', event.home, 'sb-row-name');
+        const awayName = make('span', event.away, 'sb-row-name sb-away-name');
         if (market) {
-          const outcomes = [...market.outcomes].sort((a, b) => ([event.home, 'Draw', event.away].indexOf(a.name)) - ([event.home, 'Draw', event.away].indexOf(b.name)));
-          for (const outcome of outcomes) prices.append(rateButton(event, book, market, outcome, true));
-        } else prices.append(make('span', '승무패 배당 미제공', 'sb-no-odds'));
+          const teamButton = name => {
+            const outcome = market.outcomes.find(item => item.name === name);
+            if (!outcome) return make('span', '—', 'sb-row-price');
+            const button = rateButton(event, book, market, outcome); button.classList.add('sb-row-price');
+            button.querySelector('span')?.remove();button.setAttribute('aria-label',name+' 배당 '+priceText(outcome.price));return button;
+          };
+          prices.append(homeName, teamButton(event.home));
+          const draw = market.outcomes.find(item => item.name === 'Draw');
+          if (draw) {const button = rateButton(event, book, market, draw);button.classList.add('sb-row-middle');prices.append(button);}
+          else {const point = market.outcomes.find(item => item.name === event.home)?.point; prices.append(make('span', point ?? 'VS', 'sb-row-middle'));}
+          prices.append(teamButton(event.away), awayName);
+        } else {prices.append(homeName, make('span','—','sb-row-price'), make('span', 'VS', 'sb-row-middle'), make('span','—','sb-row-price'), awayName);}
         row.append(prices); list.append(row);
+        row.append(make('span', event.scores?.map(item => item.score).join(' : ') || '', 'sb-row-score'));
       }
       pagination.replaceChildren();
       for (const [number, label] of [[page - 1, '‹ 이전'], [page + 1, '다음 ›']]) {const button = make('button', label); button.type = 'button'; button.disabled = number < 1 || number > pages; button.onclick = () => {page = number; renderList(); list.scrollTop = 0;}; pagination.append(button);}
@@ -172,7 +202,11 @@ async function renderSports(mode) {
       for (const market of book.markets.filter(item => marketFilter === 'all' || item.key === marketFilter)) {
         marketList.append(make('h3', marketName(market.key), 'sb-market-heading'));
         const outcomes = make('div', '', 'sb-outcomes' + (market.outcomes.length === 3 && market.key.startsWith('h2h') ? ' sb-outcomes-three' : ''));
-        for (const outcome of market.outcomes) outcomes.append(rateButton(event, book, market, outcome));
+        const ordered = market.key.startsWith('h2h') ? [...market.outcomes].sort((a,b)=>{
+          const rank = name => name===event.home?0:name==='Draw'?1:name===event.away?2:3;
+          return rank(a.name)-rank(b.name);
+        }) : market.outcomes;
+        for (const outcome of ordered) outcomes.append(rateButton(event, book, market, outcome));
         marketList.append(outcomes);
         if (market.updatedAt) marketList.append(make('p', '배당 갱신 ' + time(market.updatedAt), 'sb-market-time'));
       }
@@ -205,6 +239,7 @@ async function renderSports(mode) {
       detail.append(marketList); updateSelections();
     }
     function renderCart() {
+      historyVersion++;
       cart.replaceChildren(make('h2', '베팅 카트', 'sb-panel-heading'));
       const tabs = make('div', '', 'sb-slip-tabs');
       for (const [value, label] of [['single', '싱글'], ['multi', '멀티']]) {const button = make('button', label, value === sportsSlip.mode ? 'active' : ''); button.type = 'button'; button.onclick = () => {sportsSlip.mode = value; renderCart();}; tabs.append(button);}
@@ -219,39 +254,79 @@ async function renderSports(mode) {
       cart.append(picks, cartNotice); cartNotice.textContent = '';
       const clear = make('button', '▣ 모두 비우기', 'sb-clear-slip'); clear.type = 'button'; clear.onclick = () => {sportsSlip.picks.clear(); renderCart(); updateSelections();}; cart.append(clear);
       const funds = make('p', wallet ? '사용 가능 금액 ' + format(cash) + '원' : '로그인 후 보유금액을 확인할 수 있습니다.', 'sb-slip-funds'); cart.append(funds);
-      const amountRow = make('div', '', 'sb-stake-row');
-      const input = document.createElement('input'); input.id = 'cart-stake'; input.type = 'text'; input.inputMode = 'numeric'; input.autocomplete = 'off'; input.maxLength = 25; input.placeholder = '베팅금액'; input.setAttribute('aria-label', '베팅금액'); input.value = sportsSlip.stake;
-      for (const [symbol, delta] of [['−', -10000n], ['+', 10000n]]) {const button = make('button', symbol); button.type = 'button'; button.setAttribute('aria-label', delta < 0 ? '금액 1만원 줄이기' : '금액 1만원 늘리기'); button.onclick = () => setStake((stakeValue() + delta < 0n ? 0n : stakeValue() + delta).toString()); amountRow.append(button);}
-      amountRow.append(input); cart.append(amountRow);
-      const presets = make('div', '', 'sb-stake-presets');
-      for (const amount of [10000, 50000, 100000, 500000, 1000000]) {const button = make('button', format(amount)); button.type = 'button'; button.onclick = () => setStake(String(amount)); presets.append(button);}
-      const maxButton = make('button', 'MAX'); maxButton.type = 'button'; maxButton.onclick = () => {
-        if (!wallet) {cartNotice.textContent = '로그인 후 MAX 금액을 사용할 수 있습니다.'; return;}
-        const divisor = sportsSlip.mode === 'single' ? BigInt(Math.max(1, sportsSlip.picks.size)) : 1n;
-        const limit = limits ? BigInt(limits[sportsSlip.mode === 'single' ? 'single_max' : 'multi_max']) : 1000000000000n;
-        setStake((cash / divisor < limit ? cash / divisor : limit).toString());
-      }; presets.append(maxButton); cart.append(presets);
+      const controls = createStakeControls({id: 'cart-stake', value: sportsSlip.stake,
+        onChange: (value, error) => {sportsSlip.stake = value; cartNotice.textContent = error; quoteRefresh();},
+        onMax: () => {
+          if (!wallet) {cartNotice.textContent = '로그인 후 MAX 금액을 사용할 수 있습니다.'; return null;}
+          const divisor = sportsSlip.mode === 'single' ? BigInt(Math.max(1, sportsSlip.picks.size)) : 1n;
+          const limit = limits ? BigInt(limits[sportsSlip.mode === 'single' ? 'single_max' : 'multi_max']) : 1000000000000n;
+          return cash / divisor < limit ? cash / divisor : limit;
+        }});
+      const {input, stakeValue} = controls; cart.append(controls.root);
       const quote = make('dl', '', 'sb-quote');
       const multiplier = make('dd'); multiplier.id = 'cart-odds'; const outlay = make('dd'); outlay.id = 'cart-total-stake'; const payout = make('dd'); payout.id = 'cart-payout';
       for (const [label, value] of [['전체 배당', multiplier], ['총 베팅금액', outlay], ['예상 당첨금액', payout]]) {const row = make('div'); row.append(make('dt', label), value); quote.append(row);}
       cart.append(quote, make('p', '싱글 금액은 각 경기에 적용됩니다. 한 경기에서는 한 항목만 선택할 수 있습니다.', 'sb-slip-help'));
       const limitsNote = make('p', '', 'sb-slip-limit'); cart.append(limitsNote);
-      cart.append(make('p', '선택·예상금액 계산용 카트입니다. 실제 접수 기능은 아직 연결되지 않았습니다.', 'sb-slip-help'));
-      const submit = make('button', '베팅 접수 준비 중', 'primary-button sb-submit-bet'); submit.type = 'button'; submit.disabled = true; cart.append(submit);
-      function stakeValue() {const digits = input.value.replace(/,/g, ''); return /^\d+$/.test(digits) && digits.length <= 13 ? BigInt(digits) : 0n;}
-      function setStake(value) {input.value = value; input.dispatchEvent(new Event('input'));}
-      input.oninput = () => {
-        const raw = input.value;
-        if (!/^[0-9,]*$/.test(raw)) {cartNotice.textContent = '금액은 숫자로 입력해 주세요.'; sportsSlip.stake = raw; quoteRefresh(); return;}
-        const before = raw.slice(0, input.selectionStart ?? raw.length).replace(/,/g, '').length;
-        const original = raw.replace(/,/g, ''); const digits = original.replace(/^0+(?=\d)/, '');
-        input.value = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        let cursor = 0, consumed = 0; const target = Math.max(0, before - (original.length - digits.length));
-        while (cursor < input.value.length && consumed < target) {if (input.value[cursor] !== ',') consumed++; cursor++;}
-        input.setSelectionRange(cursor, cursor); sportsSlip.stake = input.value; cartNotice.textContent = ''; quoteRefresh();
+      cart.append(make('p', '현금 가치·환전이 없는 가상머니 테스트입니다. 접수 시 가상머니가 차감됩니다.', 'sb-slip-help'));
+      const submit = make('button', sportsSlip.submitting ? '접수 중…' : '배팅하기', 'primary-button sb-submit-bet'); submit.type = 'button'; const availabilityNote = make('p', '', 'sb-slip-help'); cart.append(availabilityNote, submit);
+      submit.onclick = async () => {
+        if (sportsSlip.submitting) return;
+        const body = {mode: sportsSlip.mode, stake: stakeValue().toString(), picks: [...sportsSlip.picks.values()].map(p => ({eventId: p.event.id, bookKey: p.bookKey, market: p.market, name: p.outcome.name, price: p.outcome.price, point: p.outcome.point ?? null, description: p.outcome.description || ''}))};
+        const signature = JSON.stringify(body);
+        if (!sportsSlip.pending || sportsSlip.pending.signature !== signature) sportsSlip.pending = {signature, requestId: crypto.randomUUID()};
+        const attempt = sportsSlip.pending;
+        sportsSlip.submitting = true; submit.textContent = '접수 중…'; submit.setAttribute('aria-busy', 'true'); panel.inert = true; submit.disabled = true; cartNotice.textContent = '가상머니 테스트 접수 중…';
+        let success = null;
+        try {
+          const session = await getSession();
+          const response = await fetch('/api/sports/slips/submit/', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-CSRFToken': session.csrfToken}, body: JSON.stringify({...body, requestId: attempt.requestId})});
+          const result = await response.json();
+          if (!response.ok || !result.ok) throw new Error(result.message || '접수하지 못했습니다.');
+          success = result.slip;
+          window.dispatchEvent(new Event('wallet-changed'));
+          sportsSlip.picks.clear(); sportsSlip.stake = ''; sportsSlip.pending = null;
+        } catch (error) {cartNotice.textContent = error.message || '연결을 확인하고 다시 눌러 주세요.';}
+        finally {sportsSlip.submitting = false; panel.inert = false; submit.removeAttribute('aria-busy'); submit.textContent = '배팅하기'; quoteRefresh();}
+        if (success) {
+          await refreshFunds();
+          cartNotice.textContent = '#' + success.id + ' 테스트 접수 완료 · 가상머니 ' + format(success.totalStake) + ' 차감';
+        }
       };
+      historyBox.replaceChildren();
+      async function history(page = 1) {
+        if (!wallet) return;
+        const version = ++historyVersion;
+        try {
+          const response = await fetch('/api/sports/slips/?page=' + page, {credentials: 'same-origin', cache: 'no-store'});
+          if (!response.ok || !historyBox.isConnected || version !== historyVersion) return;
+          const result = await response.json(); historyBox.replaceChildren(make('h3', '배팅 내역'));
+          if (!result.items.length) historyBox.append(make('p', '접수 내역이 없습니다.'));
+          const resultLabel = {pending: '정산 대기', won: '적중', lost: '미적중', void: '취소', mixed: '혼합 결과'};
+          for (const item of result.items) {
+            const row = make('article', '', 'sb-history-ticket'); row.dataset.slipId=item.id;
+            const heading=make('div','','sb-ticket-heading');heading.append(make('strong','#'+item.id+' · '+(item.mode==='single'?'싱글':'멀티')+' · '+(resultLabel[item.status]||'정산 대기')),make('small',time(item.createdAt)));row.append(heading);
+            const scroll=make('div','','sb-ticket-scroll'),table=make('table'),thead=make('thead'),header=make('tr');
+            for(const label of ['경기 시간','리그','홈팀','배당','기준값','배당','원정팀','결과'])header.append(make('th',label));thead.append(header);table.append(thead);
+            const tbody=make('tbody');
+            for (const leg of item.legs) tbody.append(sportsHistoryRow(leg,make,time,priceText,marketName(leg.market)));
+            table.append(tbody);scroll.append(table);row.append(scroll);
+            const totals=make('dl','','sb-ticket-totals');
+            const odds=item.mode==='multi'?priceText(item.legs.reduce((value,leg)=>value*Number(leg.price),1)):item.legs.map(leg=>priceText(leg.price)).join(' / ');
+            for(const [label,value] of [['배당',odds],['배팅금액',format(item.totalStake)+'원'],['적중예상금액',format(item.expectedReturn||0)+'원'],['적중금액',format(item.creditedAmount||0)+'원']]){const cell=make('div');cell.append(make('dt',label),make('dd',value));totals.append(cell);}row.append(totals);
+            historyBox.append(row);
+          }
+          for (const [label, target] of [['이전', result.page - 1], ['다음', result.page + 1]]) {
+            const button = make('button', label); button.type = 'button'; button.disabled = target < 1 || target > result.pages; button.onclick = () => history(target); historyBox.append(button);
+          }
+        } catch {if (historyBox.isConnected && version === historyVersion) historyBox.textContent = '접수 내역을 불러오지 못했습니다.';}
+      }
+      history();
       quoteRefresh = () => {
         const stake = stakeValue(); const choices = [...sportsSlip.picks.values()];
+        submit.disabled = sportsSlip.submitting || !wallet || !choices.length || stake <= 0n;
+        availabilityNote.textContent = !wallet ? '로그인 후 이용할 수 있습니다.' : !choices.length ? '경기 배당을 먼저 선택해 주세요.' : stake <= 0n ? '금액을 입력해 주세요.' : '';
+        submit.title = availabilityNote.textContent;
         let numerator = 1n, denominator = 1n, winnings = 0n;
         for (const pick of choices) {
           const [whole, fraction = ''] = pick.outcome.price.split('.');
@@ -270,7 +345,7 @@ async function renderSports(mode) {
     }
     async function refreshFunds() {
       const owner = document.querySelector('.header-sub>div')?.dataset.username || '';
-      if (sportsSlip.owner !== null && sportsSlip.owner !== owner) {sportsSlip.picks.clear(); sportsSlip.stake = '';}
+      if (sportsSlip.owner !== null && sportsSlip.owner !== owner) {sportsSlip.picks.clear(); sportsSlip.stake = ''; sportsSlip.pending = null;}
       sportsSlip.owner = owner;
       try {
         const [walletResponse, detailsResponse, permissionsResponse] = await Promise.all([fetch('/api/wallet/', {cache: 'no-store', credentials: 'same-origin'}), fetch('/api/accounts/details/', {cache: 'no-store', credentials: 'same-origin'}), fetch('/api/sports/permissions/', {cache: 'no-store', credentials: 'same-origin'})]);

@@ -2,10 +2,39 @@ from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
 from .models import Wallet,MoneyRequest,PointGrant,PointConversion,WalletEntry
 from .services import decide,grant_points,reply_deposit_account
+from accounts.member_columns import MemberColumns,member_metrics
+
+
+class BalanceHoldersFilter(admin.SimpleListFilter):
+    title='보유금액 회원'
+    parameter_name='holders'
+    def lookups(self,request,model_admin): return [('yes','보유금액이 있는 회원')]
+    def queryset(self,request,queryset):
+        if self.value()=='yes': return queryset.filter(available__gt=0,member__is_staff=False)
+        return queryset
 
 @admin.register(Wallet)
-class WalletAdmin(admin.ModelAdmin):
-    list_display=["member","available","reserved","points"]
+class WalletAdmin(MemberColumns,admin.ModelAdmin):
+    list_display=MemberColumns.member_columns
+    list_display_links=None
+    def get_urls(self):
+        from django.urls import path
+        from .member_detail import detail
+        return [path('<int:object_id>/member/',self.admin_site.admin_view(lambda request,object_id:detail(self,request,object_id)),name='wallet_member_detail')]+super().get_urls()
+    @admin.display(description='아이디')
+    def member_username(self,obj):
+        from django.utils.html import format_html
+        from django.urls import reverse
+        return format_html('<a href="{}">{}</a>',reverse('admin:accounts_user_change',args=[obj.member_id]),obj.member.username)
+    def get_queryset(self,request):
+        from django.contrib.auth import get_user_model
+        from django.db.models import Prefetch
+        return super().get_queryset(request).select_related(None).prefetch_related(Prefetch('member',queryset=member_metrics(get_user_model().objects.all())))
+    list_filter=[BalanceHoldersFilter]
+    list_select_related=False
+    ordering=['-available','member__username']
+    @admin.display(description='닉네임')
+    def nickname(self,obj): return obj.member.nickname
     search_fields=["member__username","member__nickname"]
     readonly_fields=["member","available","reserved","points"]
     def has_add_permission(self,request):return False

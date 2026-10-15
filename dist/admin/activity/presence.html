@@ -1,0 +1,6 @@
+{% extends "admin/change_list.html" %}
+{% block content %}
+<p>사용자가 보고 있는 홈페이지 화면을 30초마다 확인합니다. 90초 동안 확인되지 않으면 ‘최근 활동 없음’으로 표시합니다. 여러 창을 이용하면 마지막으로 확인된 화면이 표시됩니다.</p>
+{{ block.super }}
+<script>setInterval(()=>{if(!document.hidden&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))location.reload();},30000);</script>
+{% endblock %}

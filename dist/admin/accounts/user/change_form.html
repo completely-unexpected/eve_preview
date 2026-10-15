@@ -1,0 +1,33 @@
+{% extends "admin/change_form.html" %}
+{% block extrastyle %}{{ block.super }}
+<style>
+.member-section-tabs{display:flex;flex-wrap:wrap;gap:7px;padding:10px 0;margin-bottom:12px;border-bottom:1px solid var(--hairline-color)}
+.member-section-tabs button{padding:10px 18px;background:var(--darkened-bg);color:var(--body-fg);border:1px solid var(--hairline-color);border-radius:4px;cursor:pointer;font:inherit}
+.member-section-tabs button[aria-selected=true]{background:var(--primary);color:var(--primary-fg);border-color:var(--primary)}
+fieldset.member-horizontal{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0;border:1px solid var(--hairline-color)}
+fieldset.member-horizontal[hidden]{display:none!important}
+.member-horizontal>.fieldset-heading,.member-horizontal>.description{grid-column:1/-1}
+.member-horizontal>.form-row{padding:12px 15px;min-width:0;border-right:1px solid var(--hairline-color);border-bottom:1px solid var(--hairline-color);margin:0}
+.member-horizontal .form-row>.flex-container{display:flex;flex-direction:column;align-items:stretch;gap:7px}
+.member-horizontal label{float:none!important;width:auto!important;padding:0!important;font-weight:600}
+.member-horizontal .readonly{padding:0!important;min-height:20px;overflow-wrap:anywhere}
+.member-horizontal .help{margin:0!important;padding:0!important}
+.member-horizontal input:not([type=checkbox]),.member-horizontal select,.member-horizontal textarea{max-width:100%;box-sizing:border-box}
+.member-horizontal .field-admin_notes,.member-horizontal .field-password,.member-horizontal .field-groups,.member-horizontal .field-user_permissions{grid-column:1/-1}
+.member-horizontal .field-member_financial_summary{grid-column:1/-1}
+.member-financial-scroll{overflow:auto;max-width:100%}
+.member-financial-table{width:100%;min-width:850px;border-collapse:collapse}
+.member-financial-table th,.member-financial-table td{padding:10px 12px;border:1px solid var(--hairline-color);white-space:nowrap;text-align:center;font-variant-numeric:tabular-nums}
+.member-financial-table th{background:var(--darkened-bg);color:var(--body-fg)}
+@media(max-width:650px){fieldset.member-horizontal{grid-template-columns:minmax(0,1fr)}.member-section-tabs button{padding:8px 10px}}
+</style>{% endblock %}
+{% block admin_change_form_document_ready %}{{ block.super }}
+<script>
+(()=>{const form=document.querySelector('#user_form');if(!form)return;const sections=[...form.querySelectorAll('fieldset.module.aligned')];if(!sections.length)return;
+const tabs=document.createElement('nav');tabs.className='member-section-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','회원 상세 정보');sections[0].before(tabs);
+function show(index,focus=false){sections.forEach((section,i)=>{section.hidden=i!==index;const button=tabs.children[i];button.setAttribute('aria-selected',String(i===index));button.tabIndex=i===index?0:-1;});if(focus)tabs.children[index].focus();}
+sections.forEach((section,index)=>{section.classList.add('member-horizontal');section.id='member-panel-'+index;section.setAttribute('role','tabpanel');const button=document.createElement('button');button.type='button';button.textContent=section.querySelector('.fieldset-heading')?.textContent.trim()||'계정 정보';button.id='member-tab-'+index;button.setAttribute('role','tab');button.setAttribute('aria-controls',section.id);section.setAttribute('aria-labelledby',button.id);button.onclick=()=>show(index);button.onkeydown=event=>{let next;if(event.key==='ArrowRight')next=(index+1)%sections.length;if(event.key==='ArrowLeft')next=(index+sections.length-1)%sections.length;if(next!==undefined){event.preventDefault();show(next,true);}};tabs.append(button);});
+const errorIndex=sections.findIndex(section=>section.querySelector('.errorlist'));show(errorIndex<0?0:errorIndex);
+form.addEventListener('invalid',event=>{const index=sections.findIndex(section=>section.contains(event.target));if(index>=0)show(index);},true);
+})();
+</script>{% endblock %}

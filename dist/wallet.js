@@ -308,6 +308,7 @@ async function renderWallet(id) {
             feedback.hidden = false;
             return;
           }
+          window.dispatchEvent(new Event('wallet-changed'));
           await renderWallet();
           const message = action === 'convert' ? '포인트가 보유금액으로 전환되었습니다.' : label + '이 접수되었습니다.';
           document.querySelector('#wallet-content')?.prepend(make('p', message, 'wallet-success'));

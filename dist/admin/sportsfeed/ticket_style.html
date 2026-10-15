@@ -1,0 +1,13 @@
+<style>
+.admin-ticket{margin:12px 0;border:1px solid var(--hairline-color);border-radius:4px;overflow:hidden}
+.admin-ticket header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:9px 12px;background:var(--darkened-bg)}
+.admin-ticket .ticket-scroll{overflow:auto}.admin-ticket table{width:100%;border-collapse:collapse;font-size:12px}.admin-ticket td,.admin-ticket th{padding:5px 8px;border:1px solid var(--hairline-color);white-space:nowrap}
+.admin-ticket .selected{background:#344f6a;color:#f1f6fc;font-weight:bold}.admin-ticket .result{padding:3px 6px;border-radius:3px;white-space:nowrap}.admin-ticket .lost{background:#81383e;color:white}.admin-ticket .won{background:#285c91;color:white}.admin-ticket .pending,.admin-ticket .void,.admin-ticket .mixed{background:var(--darkened-bg);color:var(--body-fg)}
+.admin-ticket dl{display:flex;flex-wrap:wrap;margin:0;padding:8px;gap:14px}.admin-ticket dl>div{flex:1;min-width:130px}.admin-ticket dt{font-size:12px}.admin-ticket dd{margin:3px 0 0;font-weight:bold}.admin-ticket .ticket-actions{padding:8px;display:flex;align-items:center;gap:12px}.admin-ticket .ticket-actions button{padding:7px 14px;border:0;border-radius:3px;cursor:pointer;background:#506575;color:white}.admin-ticket .ticket-actions button[value=lost]{background:#81383e}.admin-ticket small{display:block;font-size:11px}.admin-ticket .pb-options{display:flex;gap:4px}.admin-ticket .pb-options span{padding:3px 5px;border:1px solid var(--hairline-color);border-radius:3px}
+</style>
+<script>
+document.addEventListener('submit',function(event){
+const button=event.submitter;
+if(button?.dataset.confirmCancel==='yes'&&!window.confirm('이 배팅을 취소하시겠습니까? 미정산 선택의 취소 금액이 회원에게 복원됩니다.'))event.preventDefault();
+});
+</script>

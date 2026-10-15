@@ -1,0 +1,16 @@
+<style>
+.harvester-grid{min-width:850px}
+.harvester-grid .team-price{display:flex;align-items:center;justify-content:space-between;gap:18px;min-width:200px}
+.harvester-grid .team-price .price{color:#ffe366;font-weight:bold;font-variant-numeric:tabular-nums;flex-shrink:0}
+.harvester-grid.match-results .team-price .price{color:inherit}
+</style>
+<div style="overflow:auto"><table class="match-grid harvester-grid{% if results %} match-results{% endif %}">
+<thead><tr><th>시간</th><th>리그</th><th>홈팀 · 배당</th><th>기준값 / 무</th><th>원정팀 · 배당</th><th>점수</th>{% if not results %}<th>관리</th>{% endif %}</tr></thead>
+<tbody>{% for item in page %}<tr>
+<td>{{ item.display.time }}</td><td title="{{ item.source_label }}">{{ item.event.league }}</td>
+<td class="team{% if item.display.winner == 'home' %} winner{% endif %}" {% if item.display.winner == 'home' %}aria-label="승리팀"{% endif %}><div class="team-price"><span>{{ item.event.home }}</span><span class="price">{% include "admin/catalog/game/price_cell.html" with key=item.display.home_key price=item.display.home_price %}</span></div></td>
+<td class="middle">{% include "admin/catalog/game/price_cell.html" with key=item.display.middle_key price=item.display.middle %}</td>
+<td class="team{% if item.display.winner == 'away' %} winner{% endif %}" {% if item.display.winner == 'away' %}aria-label="승리팀"{% endif %}><div class="team-price"><span>{{ item.event.away }}</span><span class="price">{% include "admin/catalog/game/price_cell.html" with key=item.display.away_key price=item.display.away_price %}</span></div></td>
+<td class="score">{{ item.display.score }}</td>
+{% if not results %}<td><a href="{{ item.edit_url }}">{% if item.can_edit %}배당 상세 수정{% else %}상세 보기{% endif %}</a>{% if item.manual %} · 수동{% endif %}</td>{% endif %}
+</tr>{% empty %}<tr><td colspan="{% if results %}6{% else %}7{% endif %}">등록된 경기가 없습니다.</td></tr>{% endfor %}</tbody></table></div>

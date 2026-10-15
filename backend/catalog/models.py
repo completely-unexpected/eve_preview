@@ -1,4 +1,19 @@
 from django.db import models
+from django.conf import settings
+
+
+class ManualOdds(models.Model):
+    source = models.CharField('출처', max_length=20)
+    event_id = models.CharField('경기 번호', max_length=200)
+    prices = models.JSONField('수동 배당', default=dict)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name='수정 관리자')
+    updated_at = models.DateTimeField('수정 시각', auto_now=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['source', 'event_id'], name='manual_odds_event')]
+        verbose_name = '수동 배당 설정'
+        verbose_name_plural = '수동 배당 설정'
+
 
 class Game(models.Model):
     class Category(models.TextChoices):

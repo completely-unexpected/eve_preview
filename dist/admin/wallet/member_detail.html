@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p><a href="{% url 'admin:wallet_wallet_changelist' %}?holders=yes">← 회원 잔액 목록</a></p>
+<section class="module" style="padding:20px;max-width:850px">
+<h2>{{ member.username }} · {{ member.nickname }}</h2>
+<form method="post">{% csrf_token %}
+{{ form.non_field_errors }}
+<table style="width:100%"><tbody>
+<tr><th>이름</th><td>{{ form.legal_name.errors }}{{ form.legal_name }}</td></tr>
+<tr><th>전화번호</th><td>{{ form.phone_number.errors }}{{ form.phone_number }}</td></tr>
+<tr><th>지갑번호</th><td>{{ form.wallet_number.errors }}{{ form.wallet_number }}</td></tr>
+<tr><th>접속 IP</th><td>{{ presence.last_ip|default:'아직 확인되지 않음' }}</td></tr>
+<tr><th>현재 이용 위치</th><td>{{ location }}{% if presence %}<br><small>마지막 확인: {{ presence.last_seen }}</small>{% endif %}</td></tr>
+<tr><th>비고</th><td>{{ form.admin_notes.errors }}{{ form.admin_notes }}</td></tr>
+</tbody></table>
+{% if can_edit %}<div style="margin-top:16px"><input type="submit" class="default" value="회원 정보 저장"></div>{% endif %}
+</form>
+</section>
+{% endblock %}

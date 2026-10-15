@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+{% load tz %}
+{% block content %}
+{% timezone "Asia/Seoul" %}
+<style>.harvester-history th,.harvester-history td{white-space:nowrap;padding:8px}.harvester-history .progress{white-space:normal;min-width:180px}.harvester-history .error{white-space:normal;min-width:180px;max-width:360px;overflow-wrap:anywhere}.harvester-history details{max-width:360px}.harvester-history summary{cursor:pointer}</style>
+<p>기존 OddsPortal 웹 수집과 The Odds API 수집은 그대로 유지됩니다. 업체별 상세 배당은 OddsHarvester 0.20.0으로, OddsPortal 목록 표시 배당은 별도 목록 수집기로 읽어 이 화면에 저장합니다.</p>
+<p>수집 업체에서 <strong>OddsPortal — 경기 목록 표시 배당</strong>을 선택하면 선택 날짜의 목록 표시값을 수집합니다. 리그는 전체를 선택하세요. 배당 범위는 적용되지 않으며 특정 업체·평균·최고 배당으로 간주하지 않습니다. 과거 결과도 선택 날짜 기준입니다.</p>
+<p><a href="{% url 'admin:catalog_game_odds' %}?source={{ source }}">{% if inplay %}Inplay 경기 보기{% else %}Harvester 예정 경기 보기{% endif %}</a> · <a href="{% url 'admin:catalog_game_odds' %}?source={{ source }}&amp;status=results">경기결과 보기</a> · <a href="{% url 'admin:sportsfeed_oddsportalsnapshot_changelist' %}">OddsParsing</a></p>
+<p>저장된 경기 {{ count }}개 · 최근 저장 {{ snapshot.fetched_at|date:'m-d H:i'|default:'아직 없음' }}</p>
+<div class="module" style="padding:16px">
+<h2>수집 실행</h2>
+{% if inplay %}<p>현재 진행 중인 경기와 배당을 실행 시점에 수집합니다. OddsHarvester를 사용하며 별도의 Inplay 수집본에 저장합니다.</p>{% else %}<p>예정 경기는 선택 날짜·시각 이후에 시작하는 경기입니다. 과거 경기의 전체는 지원 리그마다 현재 시즌 결과 1페이지를 수집합니다. 수집 종류 전체는 예정·과거 결과만 처리합니다.</p>{% endif %}
+<p>전체 배당은 OddsHarvester가 지원하는 시장이며 사이트에 없는 배당은 가져오지 못합니다. 경기 수 한도는 종목·수집 종류별로 적용됩니다. 전체 선택 시 수집 시간이 길어질 수 있습니다.</p>
+{% if can_collect %}<form method="post">{% csrf_token %}<input type="hidden" name="action" value="collect">{{ form.as_p }}<button type="submit" class="button" {% if busy %}disabled{% endif %}>{% if inplay %}Inplay 수집 시작{% else %}Harvester 수집 시작{% endif %}</button></form>
+{% if busy and not active %}<p>다른 수집 작업이 진행 중입니다. 완료 후 실행할 수 있습니다.</p>{% endif %}
+{% if active %}<form method="post" style="margin-top:15px">{% csrf_token %}<input type="hidden" name="action" value="stop"><button type="submit">{% if inplay %}Inplay{% else %}Harvester{% endif %} 수집 중지</button></form>{% endif %}{% endif %}
+<p>상세 경기 수는 입력한 한도까지 수집합니다. 기존 홈페이지 경기와 자동 합치거나 교체하지 않습니다.</p>
+</div>
+<script>
+(()=>{const sport=document.querySelector('#id_sport'),league=document.querySelector('#id_league');if(!sport||!league)return;function sync(){const prefix=sport.value==='ice-hockey'?'hockey':sport.value;for(const option of league.options){const show=option.value==='all'||!option.value||sport.value==='all'||option.value.startsWith(prefix+'/')||option.value.startsWith(sport.value+'/');option.hidden=!show;option.disabled=!show;}if(league.selectedOptions[0]?.disabled)league.value='all';}sport.addEventListener('change',sync);sync();})();
+(()=>{const select=document.querySelector('#id_bookmaker'),input=document.querySelector('#id_bookmaker_name');if(!select||!input)return;const row=input.closest('p');function sync(){const custom=select.value==='custom';row.hidden=!custom;input.disabled=!custom;input.required=custom;}select.addEventListener('change',sync);sync();})();
+</script>
+<h2>최근 실행 이력</h2><div style="overflow:auto"><table class="harvester-history" style="width:100%"><thead><tr><th>번호</th><th>시각 (한국)</th><th>종목</th><th>종류</th><th>업체</th><th>상태</th><th>진행 상황</th><th>저장</th><th>안내</th></tr></thead><tbody>
+{% for job in jobs %}<tr><td><a href="{% url 'admin:sportsfeed_harvesterjob_change' job.pk %}">{{ job.pk }}</a></td><td>{{ job.created_at|date:'m-d H:i' }}</td><td>{{ job.sport }}</td><td>{{ job.get_mode_display }}</td><td>{{ job.target_bookmaker|default:'전체' }}</td><td>{{ job.get_status_display }}</td><td class="progress">{{ job.progress }}</td><td>{{ job.match_count }}</td><td class="error">{% if job.error %}<details><summary>수집 안내 보기</summary>{{ job.error }}</details>{% endif %}</td></tr>{% empty %}<tr><td colspan="9">수집 이력이 없습니다.</td></tr>{% endfor %}
+</tbody></table></div>
+{% if active %}<script>setTimeout(()=>{if(!document.hidden&&!document.activeElement?.closest('form'))location.reload();},10000);</script>{% endif %}
+{% endtimezone %}
+{% endblock %}

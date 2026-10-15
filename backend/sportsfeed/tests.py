@@ -3,13 +3,13 @@ from unittest.mock import MagicMock, patch
 from urllib.error import HTTPError, URLError
 
 from django.core.cache import cache
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 
 from . import services
 
 
 @override_settings(ODDS_API_KEY="test-key-never-return")
-class FeedTests(SimpleTestCase):
+class FeedTests(TestCase):
     def setUp(self):
         cache.clear()
         self.league = {"key": "soccer_epl", "title": "EPL", "group": "Soccer", "active": True, "has_outrights": False}

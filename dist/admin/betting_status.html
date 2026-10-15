@@ -1,0 +1,12 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<p>전체 회원의 정산 대기 배팅입니다. 경기 일부가 먼저 처리된 묶음도 최종 정산 전까지 표시됩니다.</p>
+<form method="get" style="display:flex;gap:10px;flex-wrap:wrap"><input name="q" value="{{ query }}" placeholder="아이디·닉네임 검색" aria-label="회원 검색"><select name="source" aria-label="게임 분류"><option value="">전체 게임</option><option value="sports" {% if source == 'sports' %}selected{% endif %}>스포츠</option><option value="powerball" {% if source == 'powerball' %}selected{% endif %}>파워볼</option></select><button type="submit">검색</button></form>
+<p>진행 중 {{ total }}건 · 배팅금액 {{ stake_total }} · 적중예상금액 {{ expected_total }}</p>
+{% include "admin/sportsfeed/ticket_style.html" %}
+{% for ticket in tickets %}
+<form method="post">{% csrf_token %}{% include "admin/sportsfeed/ticket.html" %}</form>
+{% empty %}<p>진행 중인 배팅이 없습니다.</p>{% endfor %}
+<p>{% if page.has_previous %}<a href="?{{ page_query }}&amp;page={{ page.previous_page_number }}">이전</a>{% endif %} {{ page.number }} / {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?{{ page_query }}&amp;page={{ page.next_page_number }}">다음</a>{% endif %}</p>
+<script>setInterval(()=>{if(!document.hidden&&!['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName))location.reload();},30000);</script>
+{% endblock %}

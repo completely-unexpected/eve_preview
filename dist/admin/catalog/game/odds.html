@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<style>
+.pb-result-choices{display:flex;gap:3px;align-items:stretch}
+.pb-result-choice{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:7px;min-width:55px;padding:3px 6px;background:transparent;color:var(--body-fg);border:1px solid var(--hairline-color);border-radius:2px;font-size:11px;white-space:nowrap;line-height:1.4}
+.pb-result-choice strong{font-variant-numeric:tabular-nums;color:inherit}
+.pb-result-choice.winner{background:#344f6a;border-color:#8cafd3;color:#f1f6fc;box-shadow:inset 0 -2px #9bbddd;font-weight:bold}
+.pb-result-choice.winner strong{color:#f1f6fc}
+</style>
+<p><a href="{% url 'admin:catalog_game_changelist' %}">게임 종류 관리</a> · <a href="{% url 'admin:catalog_game_odds' %}">진행·예정 경기</a> · <a href="{% url 'admin:catalog_game_odds' %}?status=results">경기결과</a></p>
+{% if request.user.is_superuser and not results %}<p><a href="{% url 'admin:catalog_game_reset_matches' %}" class="button" style="display:inline-block;background:#81383e;color:white;padding:10px 16px;border-radius:4px">등록 스포츠 경기 전체 삭제</a></p>{% endif %}
+{% if bridge_at %}<p>OddsPortal 결과 연결: 종료 반영 {{ bridge_closed }}경기 · <a href="{% url 'admin:catalog_game_odds' %}?status=awaiting">결과 확인 중 {{ bridge_pending }}경기</a> · 최근 대조 {{ bridge_at|date:'m-d H:i' }}</p>{% endif %}
+{% if status == 'awaiting' %}<p>시작 시간이 지났지만 제공처의 완료 결과나 동일 경기 여부를 아직 확인하지 못한 경기입니다. 결과가 확인되면 경기결과로 자동 이동합니다.</p>{% endif %}
+{% if results %}<p>완료된 경기는 이곳에 보관되며 배당을 수정할 수 없습니다.</p>{% else %}<p>배당 셀을 클릭하여 수정하고 Enter로 저장하세요. Esc는 취소합니다. 비우고 저장하면 수집 배당으로 돌아갑니다.</p>{% endif %}
+{% if results %}<p><a href="{% url 'admin:catalog_game_odds' %}?status=results">전체 경기결과</a> · <a href="{% url 'admin:catalog_game_odds' %}?status=results&amp;source=powerball">파워볼 회차별 경기결과</a></p>{% endif %}
+{% if row %}
+<h2>{{ row.source_label }} · {{ row.event.home }} vs {{ row.event.away }}</h2>
+<p>{{ row.event.league }} · {{ row.event.status }} · {{ row.event.startsAt }}</p>
+<p>입력한 항목만 수동 배당을 적용합니다. 비우고 저장하면 수집 배당으로 돌아갑니다. 자동 수집이 갱신되어도 수동 배당은 유지되며, 이미 접수된 배당은 바뀌지 않습니다.</p>
+{% if saved %}<p>최근 수정: {{ saved.updated_at }} · {{ saved.updated_by }}</p>{% endif %}
+<form method="post">{% csrf_token %}{{ form.as_p }}{% if can_edit and form.fields %}<button type="submit" class="button">배당 저장</button>{% endif %}</form>
+{% if not form.fields %}<p>배당 항목이 없는 경기입니다. 영상만 연결된 게임은 이곳에서 배당을 수정할 수 없습니다.</p>{% endif %}
+{% else %}
+<form method="get" style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+<input name="q" value="{{ query }}" placeholder="팀명·리그·경기 번호" aria-label="경기 검색">
+<select name="sport" aria-label="종목" onchange="this.form.elements.league.value='';this.form.submit()"><option value="">전체 종목</option>{% for key,label in sports %}<option value="{{ key }}" {% if sport == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<select name="league" aria-label="리그" onchange="this.form.submit()"><option value="">전체 리그</option>{% for key,label in leagues %}<option value="{{ key }}" {% if league == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<select name="source" onchange="this.form.elements.sport.value='';this.form.elements.league.value='';this.form.submit()" aria-label="출처"><option value="">모든 출처</option><option value="sports" {% if source == 'sports' %}selected{% endif %}>스포츠</option><option value="oddsportal" {% if source == 'oddsportal' %}selected{% endif %}>OddsPortal</option><option value="inplay" {% if source == 'inplay' %}selected{% endif %}>Inplay</option><option value="harvester" {% if source == 'harvester' %}selected{% endif %}>OddsHarvester</option><option value="powerball" {% if source == 'powerball' %}selected{% endif %}>엔트리 파워볼</option></select>
+<input type="hidden" name="status" value="{{ status }}"><button type="submit">검색</button></form>
+<p>총 {{ total }}경기 · 수집된 목록을 표시합니다. 외부 API 추가 호출은 하지 않습니다.</p>
+<style>.match-grid{width:100%;min-width:1050px;border-collapse:collapse;font-size:12px}.match-grid td,.match-grid th{padding:5px 8px;white-space:nowrap;border:1px solid var(--hairline-color)}.match-grid .team{background:#173c30;color:#f3e899;min-width:170px}.match-grid .odd{background:#173c30;color:#ffe366;font-weight:bold;text-align:right}.match-grid .middle{background:#203c34;color:white;text-align:center}.match-grid .score{text-align:center;font-variant-numeric:tabular-nums} .match-grid .team.winner{background:#344a60;color:#edf5ff;font-weight:bold;box-shadow:inset 3px 0 #9cb9d8}.match-results .team,.match-results .odd{background:#283440;color:#d9e2eb}.match-results .middle{background:#2e3b48;color:#dce5ee}.match-results .team.winner{background:#344a60;color:#edf5ff}</style>
+{% if powerball_results %}
+<div style="overflow:auto"><table class="match-grid match-results"><thead>{% include "admin/catalog/game/powerball_result_head.html" %}</thead><tbody>
+{% for item in page %}<tr>{% include "admin/catalog/game/powerball_result_row.html" with result=item.event.powerballResult %}</tr>{% empty %}<tr><td colspan="8">저장된 파워볼 결과가 없습니다.</td></tr>{% endfor %}
+</tbody></table></div>
+{% elif source == 'harvester' or source == 'inplay' %}
+{% include "admin/catalog/game/harvester_rows.html" %}
+{% else %}
+<div style="overflow:auto"><table class="match-grid{% if results %} match-results{% endif %}"><thead><tr><th>시간</th><th>리그</th><th>홈팀</th><th>배당</th><th>기준값 / 무</th><th>배당</th><th>원정팀</th><th>점수</th>{% if not results %}<th>관리</th>{% endif %}</tr></thead><tbody>
+{% for item in page %}{% if results and item.event.powerballResult %}<tr><td colspan="8"><table style="width:100%"><thead>{% include "admin/catalog/game/powerball_result_head.html" %}</thead><tbody><tr>{% include "admin/catalog/game/powerball_result_row.html" with result=item.event.powerballResult %}</tr></tbody></table></td></tr>{% else %}<tr><td>{{ item.display.time }}</td><td title="{{ item.source_label }}">{{ item.event.league }}</td><td class="team{% if item.display.winner == 'home' %} winner{% endif %}" {% if item.display.winner == 'home' %}aria-label="승리팀"{% endif %}>{{ item.event.home }}</td><td class="odd">{% include "admin/catalog/game/price_cell.html" with key=item.display.home_key price=item.display.home_price %}</td><td class="middle">{% include "admin/catalog/game/price_cell.html" with key=item.display.middle_key price=item.display.middle %}</td><td class="odd">{% include "admin/catalog/game/price_cell.html" with key=item.display.away_key price=item.display.away_price %}</td><td class="team{% if item.display.winner == 'away' %} winner{% endif %}" {% if item.display.winner == 'away' %}aria-label="승리팀"{% endif %}>{{ item.event.away }}</td><td class="score">{{ item.display.score }}</td>{% if not results %}<td><a href="{{ item.edit_url }}">{% if item.can_edit %}배당 상세 수정{% else %}상세 보기{% endif %}</a> {% if item.manual %}· 수동{% endif %}</td>{% endif %}</tr>{% endif %}{% empty %}<tr><td colspan="{% if results %}8{% else %}9{% endif %}">등록된 경기가 없습니다.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endif %}
+<p>{% if page.has_previous %}<a href="?{{ page_query }}&amp;page={{ page.previous_page_number }}">이전</a>{% endif %} {{ page.number }} / {{ page.paginator.num_pages }} {% if page.has_next %}<a href="?{{ page_query }}&amp;page={{ page.next_page_number }}">다음</a>{% endif %}</p>
+{% endif %}
+<form id="inline-csrf" hidden>{% csrf_token %}</form><p id="inline-feedback" role="status"></p>
+<style>.edit-odd{background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;min-width:55px;padding:2px 5px}.edit-odd:hover,.edit-odd:focus{outline:1px solid #ffe366}.odd-input{width:90px;font-size:12px}</style>
+<script>
+document.querySelectorAll('.edit-odd').forEach(button=>button.addEventListener('click',()=>{
+if(button.hidden)return;const input=document.createElement('input');input.className='odd-input';input.type='text';input.inputMode='decimal';input.value=button.textContent.trim().replace(/[^0-9.]/g,'');button.hidden=true;button.after(input);input.focus();input.select();let busy=false;
+function cancel(focus=true){input.remove();button.hidden=false;if(focus)button.focus();}
+input.addEventListener('blur',()=>{if(!busy)cancel(false);});
+input.addEventListener('keydown',async event=>{if(event.key==='Escape'&&!busy){cancel();return;}if(event.key!=='Enter'||busy)return;event.preventDefault();busy=true;input.disabled=true;const feedback=document.querySelector('#inline-feedback');try{
+const response=await fetch(button.dataset.url,{method:'POST',headers:{'X-CSRFToken':document.querySelector('#inline-csrf input').value},body:new URLSearchParams({inline:'1',key:button.dataset.key,value:input.value})});const data=await response.json();if(!response.ok)throw Error(data.message||'저장하지 못했습니다.');button.textContent=data.price;feedback.textContent='배당을 저장했습니다.';cancel();
+}catch(error){feedback.textContent=error.message;input.disabled=false;input.focus();}finally{busy=false;}});
+}));
+{% if not row %}setInterval(()=>{if(!document.hidden&&!document.querySelector('.odd-input')&&!document.activeElement?.closest('form'))location.reload();},30000);{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+<td>{{ result.day }} · {{ result.round }}회차</td>
+<td>{{ result.balls|join:' · ' }}</td><td>{{ result.total }}</td>
+<td>{% include "admin/catalog/game/powerball_result_choices.html" with options=result.general_parity_choices %}</td>
+<td>{% include "admin/catalog/game/powerball_result_choices.html" with options=result.general_range_choices %}</td>
+<td>{{ result.powerball }}</td>
+<td>{% include "admin/catalog/game/powerball_result_choices.html" with options=result.power_parity_choices %}</td>
+<td>{% include "admin/catalog/game/powerball_result_choices.html" with options=result.power_range_choices %}</td>

@@ -68,6 +68,8 @@ def collect(force=False, progress=None):
             raise ProviderError(f"전체 재조회에는 최대 {len(leagues) * 4}크레딧이 필요합니다. 남은 {available}크레딧으로는 부족하여 기존 데이터를 유지합니다.")
 
         events = {event["id"]: event for event in payload.get("items", [])}
+        verified={event['id']:event for event in snapshot.payload.get('items',[]) if event.get('completed') and event.get('resultSource')}
+        events.update(verified)
         done = set(payload.get("completedLeagues", []))
         errors = list(payload.get("errors", []))
         score_errors = list(payload.get("scoreErrors", []))
@@ -106,7 +108,7 @@ def collect(force=False, progress=None):
                         event["status"] = "completed" if event["completed"] else "live" if event["scores"] and event["startsAt"] <= timezone.now().isoformat() else event["status"]
                 except ProviderError:
                     score_errors.append(key)
-                events.update(local)
+                events.update({key:verified.get(key,event) for key,event in local.items()})
                 done.add(key)
             except ProviderError as exc:
                 errors.append({"league": key, "message": str(exc)})

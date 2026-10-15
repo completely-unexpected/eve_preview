@@ -1,0 +1,7 @@
+{% extends "admin/change_list.html" %}
+{% load admin_list %}
+{% block result_list %}
+{% include "admin/sportsfeed/ticket_style.html" %}
+{% if action_form and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+<div class="admin-tickets">{% for ticket in tickets %}{% include "admin/sportsfeed/ticket.html" with selectable=True %}{% empty %}<p>배팅 내역이 없습니다.</p>{% endfor %}</div>
+{% endblock %}
